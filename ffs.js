@@ -19,8 +19,8 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 	
 	if (!macro.flags.ffs?.config)
 		await macro.setFlag('ffs', 'config', {});
-	let config =  macro.flags.ffs.config;
-	if (!config.background) 
+	
+	if (!macro.flags.ffs?.config?.background) 
 		return new FilePicker({
 			type: "image",
 			displayMode: 'tiles',
@@ -33,8 +33,8 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 
 	if (!character.flags.ffs[`${name}`]) 
     await character.setFlag('ffs', [`${name}`], {})
-	if (!character.flags.ffs?.config?.scale)
-		await character.setFlag('ffs', 'config.scale', 1);
+	if (!character.flags.ffs?.config)
+		await character.setFlag('ffs', 'config', {scale: 1, color: "#000000"});
 	
 	
 	let newSpan = async function(key, value){
@@ -92,12 +92,13 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 		})
 		return $span;
 	}
-	let scale = await character.flags.ffs.config.scale;
+	let { color , scale , fontFamily, fontWeight} = await character.getFlag('ffs', 'config');
+  let {width, height, left, top, background} = await macro.getFlag('ffs', 'config');
 	let options = {width: 'auto', height: 'auto', id}
-	if (!!config.width && !!config.height)
-		options = {...options,...{width: config.width*scale+16, height: config.height*scale+46}};
-   if (!config.left) {
-    let i = await loadTexture(config.background);
+	if (!!width && !!height)
+		options = {...options,...{width: width*scale+16, height: height*scale+46}};
+   if (!left) {
+    let i = await loadTexture(background);
     options = {...options,...{width: i.orig.width*scale+16, height: i.orig.height*scale+46}}
   }
 
@@ -108,36 +109,39 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
     //template: "modules/ffs/ffs.hbs",
 		render: async (html)=>{
 			//console.log(`${name} render`);
+      scale = character.flags.ffs.config.scale;
+      color = character.flags.ffs.config.color;
 			html.parent().find('div.dialog-buttons').remove();
 			html.parent().css({background:'unset'});
 			html.css({height: 'max-content !important'});
 			let $sheet = html.find('div.freeform-sheet');
 			$sheet.before($(`<style>
-				div.freeform-sheet > span, div.freeform-sheet > div > span > input , div.freeform-sheet > span * {color: black !important; border: unset !important; font-weight: bold; padding: 0; font-weight: inherit; background: unset; background-color: unset;} 
-        div.freeform-sheet > span > input:focus {box-shadow: unset; } 
-				div.freeform-sheet > span { white-space: nowrap; }
-				#${id} > section , div.freeform-sheet {overflow:hidden;}
-			</style>`))
-			if (character.flags.ffs.config.fontFamily) $sheet.css('font-family', character.flags.ffs.config.fontFamily)
-			if (character.flags.ffs.config.fontWeight) $sheet.css('font-weight', character.flags.ffs.config.fontWeight)
-			if (!config.left) {
-				let $img = $(`<img src="${config.background}" style="position: relative; cursor: crosshair">`)
+        #${id} > section.window-content > div.dialog-content > div.freeform-sheet * 
+        {border: unset !important; padding: 0; background: unset; background-color: unset; color: ${color} !important;} 
+        #${id} > section.window-content > div.dialog-content > div.freeform-sheet > span > input:focus {box-shadow: unset; } 
+				#${id} > section.window-content > div.dialog-content > div.freeform-sheet > span { white-space: nowrap; }
+				#${id} > section.window-content , #${id} > section.window-content > div.dialog-content > div.freeform-sheet {overflow:hidden;}
+			</style>`));
+			if (fontFamily) $sheet.css('font-family', fontFamily)
+			if (fontWeight) $sheet.css('font-weight', fontWeight)
+			if (!left) {
+				let $img = $(`<img src="${background}" style="position: relative; cursor: crosshair">`)
 				.click(async function(e){
-					await macro.setFlag('ffs', 'config', {left: e.offsetX, top: e.offsetY}); 
-					config =  macro.flags.ffs.config;
+          left = e.offsetX;
+          top = e.offsetY;
+					await macro.setFlag('ffs', 'config', {left, top}); 
 					d.render(true);
 				})
         $sheet.append($img);
 				$sheet.parent().parent().parent().find('h4').text('Click the top left corner where the top left should be.');
 				return;
 			}
-			if (!config.width) {
-				let $img = $(`<img src="${config.background}" style="position: relative; left: -${config.left}px; top: -${config.top}px; cursor: crosshair">`);
+			if (!width) {
+				let $img = $(`<img src="${background}" style="position: relative; left: -${left}px; top: -${top}px; cursor: crosshair">`);
 				$img.click(async function(e){
-					let width = e.offsetX-config.left;
-					let height = e.offsetY-config.top;
+					width = e.offsetX-left;
+					height = e.offsetY-top;
 					await macro.setFlag('ffs', 'config', { width, height}); 
-					config =  macro.flags.ffs.config;
 					d.close();
 					Dialog.prompt({title: "Sheet Setup Complete", callback: ()=>{macro.execute()}});
 				})
@@ -147,76 +151,86 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 			}
 			$sheet.css({
 				'transform-origin': 'top left',
-				'transform': `scale(${character.flags.ffs.config.scale})`,
-				'background-image': `url(${config.background})`,
+				'transform': `scale(${scale})`,
+				'background-image': `url(${background})`,
 				'background-repeat' : 'no-repeat',
-				'background-position': `top -${config.top}px left -${config.left}px`,
-				'height': `${config.height*scale}px`,'width': `${config.width*scale}px`
+				'background-position': `top -${top}px left -${left}px`,
+				'height': `${height}px`,'width': `${width}px`
 			})
 			
 			if (html.parent().prev().find('i.fa-cog').length) html.parent().prev().find('i.fa-cog').parent().remove();
 			html.parent().prev().find('h4.window-title').after($(`<a><i class="fas fa-cog"></i></a>`).click(function(e){
-				let fontFamily = $sheet.css('font-family');
-				let fontWeight = $sheet.css('font-weight');
 				confirm = false;
 				Dialog.wait({
 					title: `Sheet Font Config`,
 					content: `
 					${[...Object.keys(game.settings.get('core', 'fonts')), ...CONFIG.fontFamilies].reduce((a,f)=>a+=`<option value="${f}" style="font-family: ${f};">${f}</option>`,`<select class="fontFamily" style="width:100%">`) + `</select>`}
 					${[...Array(10)].map((x,i)=>(i+1)*100).reduce((a,w)=>a+=`<option value="${w}" style="font-weight: ${w};">${w}</option>`,`<select class="fontWeight" style="width:100%">`)+`</select>`}
+          <input class="fontColor" type="color" value="${color}" style="border:unset; width: 100%">
 					`,
-					buttons: {
+					buttons: {/*
 						confirm: {
               label: 'Confirm', 
               callback: async (html) =>{
 							  confirm = true;
-							  return await character.setFlag('ffs', 'config', {fontFamily: html.find('.fontFamily').val(), fontWeight: html.find('.fontWeight').val()});
+							  await character.setFlag('ffs', 'config', {fontFamily: html.find('.fontFamily').val(), fontWeight: html.find('.fontWeight').val()})
+                return d.render(true);
 						  }
-            }
+            }*/
 					},
-					default: 'confirm',
+					//default: 'confirm',
 					render: (html)=>{ 
 						let $fontFamily = html.find('.fontFamily');
-						$fontFamily.val(character.flags.ffs.config.fontFamily);
+						$fontFamily.val(fontFamily);
 						$fontFamily.css('font-family', $fontFamily.val());
-						$fontFamily.change(function(){
-							$(this).css('font-family', $(this).val())
-							$(this).next().css('font-family', $(this).val())
-							$sheet.css({'font-family': $(this).val()})
+						$fontFamily.change(async function(){
+              fontFamily =  $(this).val()
+							$(this).css({fontFamily})
+							$(this).next().css({fontFamily})
+              await character.setFlag('ffs', 'config', {fontFamily})
+              d.render(true);
 						});
 						let $fontWeight = html.find('.fontWeight');
-						$fontWeight.val(character.flags.ffs.config.fontWeight);
+						$fontWeight.val(fontWeight);
 						$fontWeight.css('font-weight', $fontWeight.val());
-						$fontWeight.change(function(){
-							$(this).css('font-weight', $(this).val())
-							$(this).prev().css('font-weight', $(this).val())
-							$sheet.css({'font-weight': $(this).val()})
+						$fontWeight.change(async function(){
+							fontWeight = $(this).val()
+              $(this).css({fontWeight})
+							$(this).prev().css({fontWeight})
+							await character.setFlag('ffs', 'config', {fontWeight})
+              d.render(true);
+						});
+            let $fontColor = html.find('.fontColor');
+            $fontColor.change(async function(){
+              color = $(this).val()
+              await character.setFlag('ffs', 'config', {color})
+              d.render(true);
+              //$(`#${id} > section.window-content > div.dialog-content > div.freeform-sheet *`)
+							//.css({'color': `${$(this).val()} !important`})
 						});
 					},
 					close:(html)=>{ 
 						if (!confirm) $sheet.css({fontFamily, fontWeight})
-						return; }
+						return d.render(true); }
 				},{...$(this).offset(), width: 100});
 			}));
 				
 			if (html.parent().prev().find('i.fa-plus').length) html.parent().prev().find('i.fa-plus').parent().remove();
 			html.parent().prev().find('h4.window-title').after($(`<a title="Zoom In" ><i class="fas fa-plus"></i></a>`).click( async function(e){
 				e.stopPropagation();
-				let scale = character.flags.ffs.config.scale+.1
+				scale += .1
 				if (scale>1) $(this).prev().show();
 				await character.setFlag('ffs', 'config.scale', scale);
-				$sheet.css({'transform': `scale(${scale})`, 'transform-origin': 'top left', width: config.width*scale, height: config.height*scale});
-				d.render(true, { width: $sheet.width()+16, height: $sheet.height()+46});
+				d.render(true, { width: width*scale+16, height: height*scale+46});
 			}));
 			if (html.parent().prev().find('i.fa-minus').length) html.parent().prev().find('i.fa-minus').parent().remove();//${character.flags.ffs.config.scale==1?'style="display: none;"':''}
 			html.parent().prev().find('h4.window-title').after($(`<a title="Zoom Out" ><i class="fas fa-minus"></i></a>`).click( async function(e){
 				e.stopPropagation();
 				//if (character.flags.ffs.config.scale==1) return $(this).hide();
-				let scale = character.flags.ffs.config.scale-.1
+				scale -= .1
 				//if (scale==1) $(this).hide();
 				await character.setFlag('ffs', 'config.scale', scale);
-				$sheet.css({'transform': `scale(${scale})`, 'transform-origin': 'top left', width: config.width*scale, height: config.height*scale});
-				d.render(true, { width: $sheet.width()+16, height: $sheet.height()+46});
+				d.render(true, { width: width*scale+16, height: height*scale+46});
 			}));
 			
 			let toDelete = Object.entries(character.getFlag("ffs", `${name}`) ?? {}).reduce((acc, [a,{text}]) => {
