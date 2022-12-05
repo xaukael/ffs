@@ -25,8 +25,8 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 			type: "image",
 			displayMode: 'tiles',
 			callback: async (path) => {
-				await macro.setFlag('ffs', 'config.background', path)
-				macro.execute()
+				await macro.setFlag('ffs', 'config.background', path);
+				macro.execute();
 				}
 			}).browse();
 
@@ -161,25 +161,16 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 			if (html.parent().prev().find('i.fa-cog').length) html.parent().prev().find('i.fa-cog').parent().remove();
 			html.parent().prev().find('h4.window-title').after($(`<a><i class="fas fa-cog"></i></a>`).click(function(e){
 				confirm = false;
-				Dialog.wait({
-					title: `Sheet Font Config`,
+				new Dialog({
+					title: `Font Configuration`,
 					content: `
 					${[...Object.keys(game.settings.get('core', 'fonts')), ...CONFIG.fontFamilies].reduce((a,f)=>a+=`<option value="${f}" style="font-family: ${f};">${f}</option>`,`<select class="fontFamily" style="width:100%">`) + `</select>`}
 					${[...Array(10)].map((x,i)=>(i+1)*100).reduce((a,w)=>a+=`<option value="${w}" style="font-weight: ${w};">${w}</option>`,`<select class="fontWeight" style="width:100%">`)+`</select>`}
-          <input class="fontColor" type="color" value="${color}" style="border:unset; width: 100%">
+          <input class="fontColor" type="color" value="${color}" style="border:unset; padding: 0; width: 100%">
 					`,
-					buttons: {/*
-						confirm: {
-              label: 'Confirm', 
-              callback: async (html) =>{
-							  confirm = true;
-							  await character.setFlag('ffs', 'config', {fontFamily: html.find('.fontFamily').val(), fontWeight: html.find('.fontWeight').val()})
-                return d.render(true);
-						  }
-            }*/
-					},
-					//default: 'confirm',
+					buttons: {},
 					render: (html)=>{ 
+            //html.parent().css({'background-image': `url(${background})`});
 						let $fontFamily = html.find('.fontFamily');
 						$fontFamily.val(fontFamily);
 						$fontFamily.css('font-family', $fontFamily.val());
@@ -201,18 +192,18 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
               d.render(true);
 						});
             let $fontColor = html.find('.fontColor');
+            $fontColor.prevAll().css({color})
             $fontColor.change(async function(){
               color = $(this).val()
+              $(this).prevAll().css({color})
               await character.setFlag('ffs', 'config', {color})
               d.render(true);
-              //$(`#${id} > section.window-content > div.dialog-content > div.freeform-sheet *`)
-							//.css({'color': `${$(this).val()} !important`})
 						});
 					},
 					close:(html)=>{ 
 						if (!confirm) $sheet.css({fontFamily, fontWeight})
 						return d.render(true); }
-				},{...$(this).offset(), width: 100});
+				},{...$(this).offset(), width: 100}).render(true);
 			}));
 				
 			if (html.parent().prev().find('i.fa-plus').length) html.parent().prev().find('i.fa-plus').parent().remove();
@@ -223,12 +214,10 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 				await character.setFlag('ffs', 'config.scale', scale);
 				d.render(true, { width: width*scale+16, height: height*scale+46});
 			}));
-			if (html.parent().prev().find('i.fa-minus').length) html.parent().prev().find('i.fa-minus').parent().remove();//${character.flags.ffs.config.scale==1?'style="display: none;"':''}
+			if (html.parent().prev().find('i.fa-minus').length) html.parent().prev().find('i.fa-minus').parent().remove();
 			html.parent().prev().find('h4.window-title').after($(`<a title="Zoom Out" ><i class="fas fa-minus"></i></a>`).click( async function(e){
 				e.stopPropagation();
-				//if (character.flags.ffs.config.scale==1) return $(this).hide();
 				scale -= .1
-				//if (scale==1) $(this).hide();
 				await character.setFlag('ffs', 'config.scale', scale);
 				d.render(true, { width: width*scale+16, height: height*scale+46});
 			}));
