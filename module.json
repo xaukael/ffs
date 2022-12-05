@@ -1,0 +1,16 @@
+
+{
+    "name": "ffs",
+    "title": "Freeform Sheet",
+    "description": "Allows creation of sheets from image files that you can place text of any size anywhere",
+    "author": "Xaukael",
+    "version": "0.0.1",
+    "minimumCoreVersion": "9",
+    "compatibleCoreVersion": "10",
+    "scripts": ["ffs.js", "jquery-ui.min.js"],
+		"tempaltes":["ffs.hbs"],
+    "dependencies": [],
+    "url": "https://github.com/xaukael/ffs/",
+    "manifest": "https://github.com/xaukael/ffs/raw/main/module.json",
+    "download": "https://github.com/xaukael/ffs/raw/main/ffs.zip"
+}
