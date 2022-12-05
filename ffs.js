@@ -31,7 +31,7 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 			}).browse();
 
 
-	if (!character.flags.ffs[`${name}`]) 
+	if (!character.flags.ffs?.[`${name}`]) 
     await character.setFlag('ffs', [`${name}`], {})
 	if (!character.flags.ffs?.config)
 		await character.setFlag('ffs', 'config', {scale: 1, color: "#000000"});
