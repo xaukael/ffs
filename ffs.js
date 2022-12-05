@@ -29,20 +29,10 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 				macro.execute()
 				}
 			}).browse();
-	/*
-	if (!jQuery.ui) {
-		$('head').append($(`<script
-		src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"
-		integrity="sha256-lSjKY0/srUM9BE3dPm+c4fBo1dky2v27Gdjm2uoZaL0="
-		crossorigin="anonymous"></script>`));
-		let waitRender = 100;
-		while (!jQuery.ui && waitRender-- > 0) await new Promise((r) => setTimeout(r, 50));
-	}
-	*/
-	if (!character)
-		return ui.notifications.warn("You do not have an assigned Character")
-	if (!character.flags.ffs) 
-		await character.setFlag('ffs', [`${name}`], {})
+
+
+	if (!character.flags.ffs[`${name}`]) 
+    await character.setFlag('ffs', [`${name}`], {})
 	if (!character.flags.ffs?.config?.scale)
 		await character.setFlag('ffs', 'config.scale', 1);
 	
@@ -278,8 +268,13 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 			d.render(true, {height: 'auto', width: 'auto'});
 		})
 }
-/*
+
 var ffs = {};
-ffs.reset = async function(macroId) {
-  game.macros.get(macroId).update({['flags.-=ffs'] = null})
-}*/
+
+ffs.resetMacroConfig = async function(macroId) {
+  await game.macros.get(macroId).update({'flags.-=ffs':null})
+}
+
+ffs.resetActorSheet = async function(actorId, name) {
+  await game.actors.get(actorId).unsetFlag('ffs', name)
+}
