@@ -5,9 +5,9 @@
  * Example Macro command: character.freeformSheet(this.id, 'test');
 */
 Actor.prototype.freeformSheet = async function(macroId, name) {
-	if (name == "config") return console.error("restricted name", name);
 	let character = this;
 	name = name.slugify().replace(/[^a-zA-Z0-9\- ]/g, '');
+	if (name == "config") return console.error("restricted name", name);
 	let macro = null;
 	macro = game.macros.get(macroId);
 	if (!macro) return console.error("macro not found. first parameter should be this.id");
@@ -30,7 +30,6 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 				}
 			}).browse();
 
-
 	if (!character.flags.ffs?.[`${name}`]) 
     await character.setFlag('ffs', [`${name}`], {})
 	if (!character.flags.ffs?.config)
@@ -39,9 +38,7 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 	ffs[id] = {};
 	ffs[id] = {...ffs[id], ...character.flags.ffs.config};
 	ffs[id] = {...ffs[id], ...macro.flags.ffs.config};
-	//let { color , scale , fontFamily, fontWeight, invert} = await character.getFlag('ffs', 'config');
-	//if (invert == undefined) invert = false;
-	//let {width, height, left, top, background} = await macro.getFlag('ffs', 'config');
+
 	let options = {width: 'auto', height: 'auto', id}
 	if (ffs[id].width && ffs[id].height)
 		options = {...options,...{width: ffs[id].width*ffs[id].scale+16, height: ffs[id].height*ffs[id].scale+46}};
@@ -49,8 +46,6 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 		let i = await loadTexture(ffs[id].background);
 		options = {...options,...{width: i.orig.width*ffs[id].scale+16, height: i.orig.height*ffs[id].scale+46}}
 	}
-	
-
 	
 	let newSpan = async function(key, value){
 		let $span = $(`<span id="${key}">${TextEditor.enrichHTML(Roll.replaceFormulaData(value.text, {...character.toObject(), ...character.getRollData()}))}
@@ -112,7 +107,6 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 		title: `${character.name}`,
 		content: `<div class="ffs" style="position: relative; cursor: text;"></div>`,
 		buttons: {},
-    //template: "modules/ffs/ffs.hbs",
 		render: async (html)=>{
 			let {width, height, left, top, background, color , scale , fontFamily, fontWeight, invert} = ffs[id];
 
@@ -170,15 +164,7 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 				'background-position': `top -${top}px left -${left}px`,
 				'height': `${height}px`,'width': `${width}px`
 			});
-			
-			// sheet cleanup?
-			/*
-			let toDelete = Object.entries(character.getFlag("ffs", `${name}`) ?? {}).reduce((acc, [a,{text}]) => {
-				if (text.trim()=="" || text === "NEW TEXT") acc[`flags.ffs.${name}.-=${a}`] = null;
-				return acc;
-			}, {});
-			await game.user.character.update(toDelete);
-			*/
+
 			// make spans
 			for (const [key, value] of Object.entries(character.flags.ffs[name])) 
 				$sheet.append(await newSpan(key, value));
@@ -206,6 +192,7 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 		},
 		close: async (html)=>{
 				if (ffs[id].hook) Hooks.off('', ffs[id].hook);
+				delete ffs[id];
 				//delete character.apps[d.appId];
 				return;
 			}
@@ -231,9 +218,7 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 			`,
 			buttons: {},
 			render: (html)=>{ 
-				html.parent().css({'color': 'white', 'filter': `${ffs[id].invert?'invert(95%)':'unset'}`});//'background': `unset`,'background-color': `unset`, 
-				//html.parent().parent().find('header').css({background: `url(../ui/denim075.png) repeat`});
-				//html.parent().parent().find('section').css({'background-image': `unset`, 'background': `unset`, 'filter': `${invert?'invert(95%)':'unset'}`});
+				html.parent().css({'color': 'white', 'filter': `${ffs[id].invert?'invert(95%)':'unset'}`});
 				let $fontFamily = html.find('.fontFamily');
 				let $fontWeight = html.find('.fontWeight');
 				let $fontColor = html.find('.fontColor');
