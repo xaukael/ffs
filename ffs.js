@@ -268,8 +268,9 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 			title: `Freeform Sheet Help`,
 			content: `<center>
 			<p>Click somewhere with the text cursor to spawn a NEW TEXT.</p>
-			<p> Changes to the text will be saved on focus loss or pressing Enter. If there is no text entered or the value is still "NEW TEXT" the element will be removed.</p>
-			<p>Click and drag saved text elements to reposition</p>
+			<p>Changes to the text will be saved on focus loss or pressing Enter. If there is no text entered or the value is still "NEW TEXT" the element will be removed.</p>
+			<p>Right-Click text elements to change them to an input to change the contents.</p>
+			<p>Left-Click and drag saved text elements to reposition them.</p>
 			<p>When hovering an element, the scroll wheel can be used to adjust the size of the text.</p>
 			<p>Entities can be dragged from the sidebar. Macros can be dragged from the hotbar or macro directory. These will create clickable links to content on the sheet.</p>
 			<p>The cog wheel in the header will show the font config. More fonts may be added in Foundry's core settings under <b>Additional Fonts</b>.</p>
