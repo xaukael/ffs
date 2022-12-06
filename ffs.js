@@ -10,7 +10,7 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 	name = name.slugify().replace(/[^a-zA-Z0-9\- ]/g, '');
 	let macro = null;
 	macro = game.macros.get(macroId);
-	if (!macro) return console.error("no arguments");
+	if (!macro) return console.error("macro not found. first parameter should be this.id");
 	
 	let id = `freeform-character-sheet-${name}-${character.id}`;
 	
@@ -34,7 +34,7 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 	if (!character.flags.ffs?.[`${name}`]) 
     await character.setFlag('ffs', [`${name}`], {})
 	if (!character.flags.ffs?.config)
-		await character.setFlag('ffs', 'config', {scale: 1, color: "#000000"});
+		await character.setFlag('ffs', 'config', {scale: 1, color: "#000000", invert: false});
 	
 	
 	let newSpan = async function(key, value){
@@ -92,7 +92,8 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 		})
 		return $span;
 	}
-	let { color , scale , fontFamily, fontWeight} = await character.getFlag('ffs', 'config');
+	let { color , scale , fontFamily, fontWeight, invert} = await character.getFlag('ffs', 'config');
+	if (invert == undefined) invert = false;
   let {width, height, left, top, background} = await macro.getFlag('ffs', 'config');
 	let options = {width: 'auto', height: 'auto', id}
 	if (!!width && !!height)
@@ -152,15 +153,19 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 			$sheet.css({
 				'transform-origin': 'top left',
 				'transform': `scale(${scale})`,
+				'filter': `${invert?'invert(95%)':'unset'}`,
 				'background-image': `url(${background})`,
 				'background-repeat' : 'no-repeat',
 				'background-position': `top -${top}px left -${left}px`,
 				'height': `${height}px`,'width': `${width}px`
 			})
-			
-			if (html.parent().prev().find('i.fa-cog').length) html.parent().prev().find('i.fa-cog').parent().remove();
-			html.parent().prev().find('h4.window-title').after($(`<a><i class="fas fa-cog"></i></a>`).click(function(e){
+			let $header = html.parent().prev();
+			if ($header.find('i.fa-cog').length) $header.find('i.fa-cog').parent().remove();
+			$header.find('h4.window-title').after($(`<a><i class="fas fa-cog"></i></a>`).click(function(e){
 				confirm = false;
+				let offset = $(this).offset();
+				offset.left -= width/2;
+				offset.top += height/3;
 				new Dialog({
 					title: `Font Configuration`,
 					content: `
@@ -170,20 +175,26 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 					`,
 					buttons: {},
 					render: (html)=>{ 
-            //html.parent().css({'background-image': `url(${background})`});
+						html.parent().parent().css({'background': `unset`,'background-color': `unset`});
+						html.parent().parent().find('header').css({background: `url(../ui/denim075.png) repeat`});
+            html.parent().parent().find('section').css({'background-image': `unset`, 'background': `unset`, 'filter': `${invert?'invert(95%)':'unset'}`});
 						let $fontFamily = html.find('.fontFamily');
+						let $fontWeight = html.find('.fontWeight');
+
 						$fontFamily.val(fontFamily);
 						$fontFamily.css('font-family', $fontFamily.val());
+						$fontWeight.css('font-weight', $fontFamily.val());
 						$fontFamily.change(async function(){
-              fontFamily =  $(this).val()
+            	fontFamily =  $(this).val()
 							$(this).css({fontFamily})
 							$(this).next().css({fontFamily})
-              await character.setFlag('ffs', 'config', {fontFamily})
-              d.render(true);
+            	await character.setFlag('ffs', 'config', {fontFamily})
+            	d.render(true);
 						});
-						let $fontWeight = html.find('.fontWeight');
+						
 						$fontWeight.val(fontWeight);
 						$fontWeight.css('font-weight', $fontWeight.val());
+						$fontFamily.css('font-weight', $fontWeight.val());
 						$fontWeight.change(async function(){
 							fontWeight = $(this).val()
               $(this).css({fontWeight})
@@ -191,6 +202,7 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 							await character.setFlag('ffs', 'config', {fontWeight})
               d.render(true);
 						});
+
             let $fontColor = html.find('.fontColor');
             $fontColor.prevAll().css({color})
             $fontColor.change(async function(){
@@ -200,28 +212,46 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
               d.render(true);
 						});
 					},
-					close:(html)=>{ 
-						if (!confirm) $sheet.css({fontFamily, fontWeight})
-						return d.render(true); }
-				},{...$(this).offset(), width: 100}).render(true);
-			}));
-				
-			if (html.parent().prev().find('i.fa-plus').length) html.parent().prev().find('i.fa-plus').parent().remove();
-			html.parent().prev().find('h4.window-title').after($(`<a title="Zoom In" ><i class="fas fa-plus"></i></a>`).click( async function(e){
-				e.stopPropagation();
-				scale += .1
-				if (scale>1) $(this).prev().show();
-				await character.setFlag('ffs', 'config.scale', scale);
-				d.render(true, { width: width*scale+16, height: height*scale+46});
-			}));
-			if (html.parent().prev().find('i.fa-minus').length) html.parent().prev().find('i.fa-minus').parent().remove();
-			html.parent().prev().find('h4.window-title').after($(`<a title="Zoom Out" ><i class="fas fa-minus"></i></a>`).click( async function(e){
-				e.stopPropagation();
-				scale -= .1
-				await character.setFlag('ffs', 'config.scale', scale);
-				d.render(true, { width: width*scale+16, height: height*scale+46});
+					close:(html)=>{ return }
+				},{...offset, width: 150}).render(true);
 			}));
 			
+			if ($header.find('i.fa-plus').length) $header.find('i.fa-plus').parent().remove();
+			$header.find('h4.window-title').after($(`<a title="Zoom In" ><i class="fas fa-plus"></i></a>`).click( async function(e){
+				e.stopPropagation();
+				scale += .1
+				scale = Math.round(scale*10)/10;
+				await character.setFlag('ffs', 'config.scale', scale);
+				d.render(true, { width: width*scale+16, height: height*scale+46});
+			}));
+
+			$header.find('a.zoom').remove()
+			$header.find('h4.window-title').after($(`<a class="zoom" title="Reset Scale"><b>${Math.round(scale*100)}%</b></a>`).click( async function(e) {
+				scale = 1;
+				await character.setFlag('ffs', 'config.scale', scale);
+				d.render(true, { width: width+16, height: height+46});
+			}));
+
+			if ($header.find('i.fa-minus').length) $header.find('i.fa-minus').parent().remove();
+			$header.find('h4.window-title').after($(`<a title="Zoom Out" ><i class="fas fa-minus"></i></a>`).click( async function(e){
+				e.stopPropagation();
+				scale -= .1
+				scale = Math.round(scale*10)/10;
+				await character.setFlag('ffs', 'config.scale', scale);
+				d.render(true, { width: width*scale+16, height: height*scale+46});
+			}));
+
+			if ($header.find('i.fa-eye').length) $header.find('i.fa-eye').parent().remove();
+			$header.find('h4.window-title').after($(`<a title="Toggle Invert" ><i class="fa-${invert?'regular':'solid'} fa-eye"></i></a>`).click( async function(e){
+				e.stopPropagation();
+				invert = !invert;
+				$sheet.css({filter: `${invert?'invert(95%)':'unset'}`});
+				$(this).find('i').removeClass('fa-solid').removeClass('fa-regular');
+				$(this).find('i').addClass(`${invert?'fa-regular':'fa-solid'}`);
+				await character.setFlag('ffs', 'config.invert', invert);
+			}));
+			
+
 			let toDelete = Object.entries(character.getFlag("ffs", `${name}`) ?? {}).reduce((acc, [a,{text}]) => {
 				if (text.trim()=="" || text === "NEW TEXT") acc[`flags.ffs.${name}.-=${a}`] = null;
 				return acc;
@@ -252,7 +282,7 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 			});
 		},
 		close: async (html)=>{
-				if (Hooks[`sheetHook${name}`]) Hooks.off('', Hooks[`sheetHook${name}`]);
+				if (ffs.hooks[`sheetHook${id}`]) Hooks.off('', ffs.hooks[`sheetHook${id}`]);
 				//delete character.apps[d.appId];
 				return;
 			}
@@ -262,8 +292,8 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 	// I do not use the document.apps because it causes renders on every flag change I do
 	// character.apps[d.appId] = d;
 	if (!d) return;
-	if (Hooks[`sheetHook${id}`]) Hooks.off('', Hooks[`sheetHook${id}`])
-	Hooks[`sheetHook${id}`] = 
+	if (ffs.hooks[`sheetHook${id}`]) Hooks.off('', ffs.hooks[`sheetHook${id}`])
+	ffs.hooks[`sheetHook${id}`] = 
 		Hooks.on(`update${this.documentName}`, (doc, updates)=>{
 			if (doc.id!=character.id) return;
 			if (!d) return;
@@ -272,7 +302,7 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 		})
 }
 
-var ffs = {};
+var ffs = {hooks: {}};
 
 ffs.resetMacroConfig = async function(macroId) {
   await game.macros.get(macroId).update({'flags.-=ffs':null})
