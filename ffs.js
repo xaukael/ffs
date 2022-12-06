@@ -66,7 +66,7 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 			.on('focusout keydown', async function(e){
 				e.stopPropagation();
 				if (e.keyCode != 13 && e.type == 'keydown') return;
-				if ($(this).val().trim()=="") {
+				if ($(this).val().trim()=="" || $(this).val() == "NEW TEXT") {
 					await character.unsetFlag('ffs', `${name}.${key}`);
 					return $(this).parent().remove();
 				}
@@ -276,6 +276,25 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 			close:(html)=>{ return }
 		},{...$(this).offset(), width: 150}).render(true);
 	}));
+
+	$header.find('h4.window-title').after($(`<a><i class="fa-solid fa-circle-question"></i></a>`).click(function(e){
+		confirm = false;
+		new Dialog({
+			title: `Freeform Sheet Help`,
+			content: `<center>
+			<p>Click somewhere with the text cursor to spawn a NEW TEXT.</p>
+			<p> Changes to the text will be saved on focus loss or pressing Enter. If there is no text entered or the value is still "NEW TEXT" the element will be removed.</p>
+			<p>Click and drag saved text elements to reposition</p>
+			<p>When hovering an element, the scroll wheel can be used to adjust the size of the text.</p>
+			<p>Entities can be dragged from the sidebar. Macros can be dragged from the hotbar or macro directory. These will create clickable links to content on the sheet.</p>
+			<p>The cog wheel in the header will show the font config. More fonts may be added in Foundry's core settings under <b>Additional Fonts</b>.</p>
+			</center>`,
+			buttons: {},
+			render: (html)=>{ 
+			},
+			close:(html)=>{ return }
+		},{width: 550}).render(true);
+	}));
 	
 	$header.find('h4.window-title').after($(`<a title="Zoom In" ><i class="fas fa-plus"></i></a>`).click( async function(e){
 		e.stopPropagation();
@@ -317,7 +336,7 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 		await character.setFlag('ffs', 'config', {invert: ffs[id].invert});
 	}));
 
-	// I do not use the document.apps because it causes renders on every flag change I do
+	// I do not use the document.apps because it causes renders on every flag change I do. This way, I can ignore reloads on all ffs updates
 	// character.apps[d.appId] = d;
 	if (!d) return;
 	if (ffs[id].hook) Hooks.off('', ffs[id].hook)
