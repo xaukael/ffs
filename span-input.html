@@ -13,7 +13,7 @@ body {cursor: cell;}
 <body onload="onload()" style="position: relative; ">
 <script>
 function onload() {
-  
+  // for font size parsing: Number("16px".match(/\d+\.?\d*/)[0])
   $('body').contextmenu(function(e){
   console.log(e.preventDefault())
   if (e.target.nodeName != "BODY") return;
