@@ -12,5 +12,8 @@ Fonts can be added through the core font settings.
   
 0.0.8
   - fixed a bug where filter temporarily resets when changing font
+  
+0.0.9
+  - fixed a bug where filter would not default correctly
 
 ![Freefrom Sheet Example](https://github.com/xaukael/ffs/blob/35a75c6696b1e596710af6bf8db9357139f5d77a/ffs-example.jpg)
