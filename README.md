@@ -7,4 +7,7 @@ Supports: inline rolls, entity links, other enriched data, @attribute replacemen
 
 Fonts can be added through the core font settings.
 
+0.0.7 
+  - now with a filter configuration dialog instead of invert toggle
+
 ![Freefrom Sheet Example](https://github.com/xaukael/ffs/blob/35a75c6696b1e596710af6bf8db9357139f5d77a/ffs-example.jpg)
