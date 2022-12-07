@@ -199,9 +199,8 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 			}
 	}, options
 	).render(true);
-	console.log(d)
-	let waitRender = 100;
 
+	let waitRender = 100;
 	// wait for the element
 	if (!d._element) 
 		while (!d._element  && waitRender-- > 0) await new Promise((r) => setTimeout(r, 50));
@@ -338,6 +337,7 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 					confirm = true;
 					let filter = [...html.find('input[type=range]')].map(f=>f.dataset.filter+'('+f.value+'%)').join(' ');
 					await character.setFlag('ffs', 'config.filter', filter);
+					ffs[id].filter = filter;
 				}},
 				cancel: {label:"cancel", callback: async (html)=>{
 				}}
