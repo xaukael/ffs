@@ -321,16 +321,16 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 	$header.find('h4.window-title').after($(`<a title="Toggle Invert" ><i class="fa-solid fa-eye"></i></a>`).click( async function(e){
 		e.stopPropagation();
 		let confirm = false;
-		let values = game.user.character.flags.ffs.config.filter.split('%').map(f=>f.split('(')).map((f,i)=>!i?f:[f[0].split(' ')[1], f[1]]).reduce((a,f)=>{ return {...a, [`${f[0]}`]: f[1]}; },{})
+		let values = character.flags.ffs.config.filter.split('%').map(f=>f.split('(')).map((f,i)=>!i?f:[f[0].split(' ')[1], f[1]]).reduce((a,f)=>{ return {...a, [`${f[0]}`]: f[1]}; },{})
 		new Dialog({
 			title: `Filter Configuration`,
 			content: `<center>
-			 grayscale<input type="range" min="0" max="100" value="${values.grayscale}" class="grayscale" data-filter="grayscale">
-			 sepia <input type="range" min="0" max="100" value="${values.sepia}" class="sepia" data-filter="sepia">
-			 invert<input type="range" min="0" max="100" value="${values.invert}" class="invert" data-filter="invert">
-			 saturate<input type="range" min="0" max="200" value="${values.saturate}" class="saturate" data-filter="saturate">
-			 contrast<input type="range" min="0" max="200" value="${values.contrast}" class="contrast" data-filter="contrast">
-			 brightness<input type="range" min="0" max="200" value="${values.brightness}" class="brightness" data-filter="brightness">
+			 grayscale<input type="range" min="0" max="100" value="${values.grayscale||0}" class="grayscale" data-filter="grayscale">
+			 sepia <input type="range" min="0" max="100" value="${values.sepia||0}" class="sepia" data-filter="sepia">
+			 invert<input type="range" min="0" max="100" value="${values.invert||0}" class="invert" data-filter="invert">
+			 saturate<input type="range" min="0" max="200" value="${values.saturate||100}" class="saturate" data-filter="saturate">
+			 contrast<input type="range" min="0" max="200" value="${values.contrast||100}" class="contrast" data-filter="contrast">
+			 brightness<input type="range" min="0" max="200" value="${values.brightness||100}" class="brightness" data-filter="brightness">
 			</center>`,
 			buttons: {
 				confrim: {label:"confirm", callback: async (html)=>{

@@ -1,10 +1,10 @@
 
 {
-    "name": "ffs",
+    "id": "ffs",
     "title": "Freeform Sheet",
     "description": "Allows creation of macros for configurable sheets from image files that you can place text of any size anywhere.",
     "author": "Xaukael",
-    "version": "0.0.8",
+    "version": "0.0.9",
     "minimumCoreVersion": "10",
     "compatibleCoreVersion": "10",
     "scripts": ["ffs.js", "jquery-ui.min.js"],
