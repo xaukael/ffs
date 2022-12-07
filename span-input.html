@@ -5,18 +5,23 @@
 <script src="https://code.jquery.com/ui/1.13.1/jquery-ui.js" id="jquery-ui"></script>
 
 <style>
-:focus-visible {   /* outline: -webkit-focus-ring-color auto 0px;*/ }
+:focus-visible {outline-color:white; outline-style: outset; outline-offset: 6px;}
+span {cursor: text; position: absolute; }
+body {cursor: cell;}
 </style>
 </head>
 <body onload="onload()" style="position: relative; ">
-<span id="1" style="position: absolute; left: 50px; top: 50px; outline: unset !important;" role="textbox" contenteditable="true">value</span>
-<span id="2" style="position: absolute; left: 150px; top: 150px; outline: unset !important;" role="textbox" contenteditable="true">value</span>
 <script>
 function onload() {
-  $('span')
+  
+  $('body').contextmenu(function(e){
+  console.log(e.preventDefault())
+  if (e.target.nodeName != "BODY") return;
+  let $span = $(`<span style="left: ${e.clientX}px; top: ${e.clientY-18}px; position: absolute;"  role="textbox" contenteditable="true">NEW TEXT</span>`)
   .focusout(async function(){
     console.log("save:",this.id, $(this).html())
     $(this).draggable('enable')
+    if ($(this).text().trim()=='') $(this).remove();
   })
   .keydown(function(e){
     if (e.key != "Enter") return 
@@ -24,19 +29,37 @@ function onload() {
   })
   .focusin(function(){
     $(this).select()
+    let selection = window.getSelection();
+    let range = document.createRange();
+    range.selectNodeContents(this);
+    selection.removeAllRanges();
+    selection.addRange(range);
     $(this).draggable('disable')
   })
-  .contextmenu(function(e){e.preventDefault()})
+  .contextmenu(function(e){
+    //e.preventDefault()
+  })
   .draggable({
     cursor: "grabbing", 
     start: function(e){
       $(this).css('pointer-events', 'none')
     },
-    stop: function(e){
-      console.log(e.type, "save location")
+    stop: function(e, d){
+      console.log(e.type, d.position)
       $(this).css('pointer-events', 'all')
     }
-  });
+  })
+  .click(function(e){
+    e.stopPropagation();
+  })
+  $(this).append($span)
+  $span.focus();
+  let selection = window.getSelection();
+  let range = document.createRange();
+  range.selectNodeContents($span[0]);
+  selection.removeAllRanges();
+  selection.addRange(range);
+  });//body click end
 
 }
 </script>
