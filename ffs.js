@@ -33,7 +33,7 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 	if (!character.flags.ffs?.[`${name}`]) 
     await character.setFlag('ffs', [`${name}`], {})
 	if (!character.flags.ffs?.config)
-		await character.setFlag('ffs', 'config', {scale: 1, color: "#000000", invert: false});
+		await character.setFlag('ffs', 'config', {scale: 1, color: "#000000", invert: false, filter: ''});
 	
 	ffs[id] = {};
 	ffs[id] = {...ffs[id], ...character.flags.ffs.config};
@@ -108,7 +108,8 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 		content: `<div class="ffs" style="position: relative; cursor: text;"></div>`,
 		buttons: {},
 		render: async (html)=>{
-			let {width, height, left, top, background, color , scale , fontFamily, fontWeight, invert} = ffs[id];
+			//console.log(`${id} render`)
+			let {width, height, left, top, background, color , scale , fontFamily, fontWeight, invert, filter} = ffs[id];
 
 			// apply configs
 			html.css({height: 'max-content !important'});
@@ -158,7 +159,7 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 			$sheet.css({
 				'transform-origin': 'top left',
 				'transform': `scale(${scale})`,
-				'filter': `${invert?'invert(95%)':'unset'}`,
+				'filter': filter,
 				'background-image': `url(${background})`,
 				'background-repeat' : 'no-repeat',
 				'background-position': `top -${top}px left -${left}px`,
@@ -206,9 +207,7 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 		while (!d._element  && waitRender-- > 0) await new Promise((r) => setTimeout(r, 50));
 	// set header buttons
 	let $header  = d._element.find('header');
-	console.log(d._element, $header)
 	$header.find('h4.window-title').after($(`<a><i class="fas fa-cog"></i></a>`).click(function(e){
-		confirm = false;
 		new Dialog({
 			title: `Font Configuration`,
 			content: `
@@ -218,7 +217,7 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 			`,
 			buttons: {},
 			render: (html)=>{ 
-				html.parent().css({'color': 'white', 'filter': `${ffs[id].invert?'invert(95%)':'unset'}`});
+				html.parent().css({'color': 'white', 'filter': `${ffs[id].invert?'invert(90%)':'unset'}`});
 				let $fontFamily = html.find('.fontFamily');
 				let $fontWeight = html.find('.fontWeight');
 				let $fontColor = html.find('.fontColor');
@@ -263,14 +262,12 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 	}));
 
 	$header.find('h4.window-title').after($(`<a><i class="fa-solid fa-circle-question"></i></a>`).click(function(e){
-		confirm = false;
 		new Dialog({
 			title: `Freeform Sheet Help`,
 			content: `<center>
 			<p>Click somewhere with the text cursor to spawn a NEW TEXT.</p>
-			<p>Changes to the text will be saved on focus loss or pressing Enter. If there is no text entered or the value is still "NEW TEXT" the element will be removed.</p>
-			<p>Right-Click text elements to change them to an input to change the contents.</p>
-			<p>Left-Click and drag saved text elements to reposition them.</p>
+			<p> Changes to the text will be saved on focus loss or pressing Enter. If there is no text entered or the value is still "NEW TEXT" the element will be removed.</p>
+			<p>Click and drag saved text elements to reposition</p>
 			<p>When hovering an element, the scroll wheel can be used to adjust the size of the text.</p>
 			<p>Entities can be dragged from the sidebar. Macros can be dragged from the hotbar or macro directory. These will create clickable links to content on the sheet.</p>
 			<p>The cog wheel in the header will show the font config. More fonts may be added in Foundry's core settings under <b>Additional Fonts</b>.</p>
@@ -312,14 +309,53 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 		await character.setFlag('ffs', 'config.scale', scale);
 		d.render(true, { width: width*scale+16, height: height*scale+46});
 	}));
-
+/*
 	$header.find('h4.window-title').after($(`<a title="Toggle Invert" ><i class="fa-${ffs[id].invert?'regular':'solid'} fa-eye"></i></a>`).click( async function(e){
 		e.stopPropagation();
 		ffs[id].invert = !ffs[id].invert;
-		d.element.find('div.ffs').css({filter: `${ffs[id].invert?'invert(95%)':'unset'}`});
+		d.element.find('div.ffs').css({filter: `${ffs[id].invert?'invert(90%)':'unset'}`});
 		$(this).find('i').removeClass('fa-solid').removeClass('fa-regular');
 		$(this).find('i').addClass(`${ffs[id].invert?'fa-regular':'fa-solid'}`);
 		await character.setFlag('ffs', 'config', {invert: ffs[id].invert});
+	}));
+*/
+	$header.find('h4.window-title').after($(`<a title="Toggle Invert" ><i class="fa-solid fa-eye"></i></a>`).click( async function(e){
+		e.stopPropagation();
+		let confirm = false;
+		let values = game.user.character.flags.ffs.config.filter.split('%').map(f=>f.split('(')).map((f,i)=>!i?f:[f[0].split(' ')[1], f[1]]).reduce((a,f)=>{ return {...a, [`${f[0]}`]: f[1]}; },{})
+		new Dialog({
+			title: `Filter Configuration`,
+			content: `<center>
+			 grayscale<input type="range" min="0" max="100" value="${values.grayscale}" class="grayscale" data-filter="grayscale">
+			 sepia <input type="range" min="0" max="100" value="${values.sepia}" class="sepia" data-filter="sepia">
+			 invert<input type="range" min="0" max="100" value="${values.invert}" class="invert" data-filter="invert">
+			 saturate<input type="range" min="0" max="200" value="${values.saturate}" class="saturate" data-filter="saturate">
+			 contrast<input type="range" min="0" max="200" value="${values.contrast}" class="contrast" data-filter="contrast">
+			 brightness<input type="range" min="0" max="200" value="${values.brightness}" class="brightness" data-filter="brightness">
+			</center>`,
+			buttons: {
+				confrim: {label:"confirm", callback: async (html)=>{
+					confirm = true;
+					let filter = [...html.find('input[type=range]')].map(f=>f.dataset.filter+'('+f.value+'%)').join(' ');
+					await character.setFlag('ffs', 'config.filter', filter);
+				}},
+				cancel: {label:"cancel", callback: async (html)=>{
+				}}
+			},
+			render: (html)=>{ 
+				html.find('input[type=range]').change(async function(){
+					let filter = [...html.find('input[type=range]')].map(f=>f.dataset.filter+'('+f.value+'%)').join(' ');
+					$(`#${id}`).find('.ffs').css({filter})
+				})
+			},
+			close:(html)=>{ 
+				if (confirm) return;
+				if (character.flags.ffs.config.filter) 
+						$(`#${id}`).find('.ffs').css({filter: character.flags.ffs.config.filter});
+					else
+						$(`#${id}`).find('.ffs').css({filter: 'unset'});
+				return }
+		}).render(true);
 	}));
 
 	// I do not use the document.apps because it causes renders on every flag change I do. This way, I can ignore reloads on all ffs updates
