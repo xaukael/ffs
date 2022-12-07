@@ -9,6 +9,7 @@ Fonts can be added through the core font settings.
 
 0.0.7 
   - now with a filter configuration dialog instead of invert toggle
+  
 0.0.8
   - fixed a bug where filter temporarily resets when changing font
 
