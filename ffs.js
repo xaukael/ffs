@@ -4,31 +4,19 @@
  * 
  * Example Macro command: character.freeformSheet(this.id, 'test');
 */
-Actor.prototype.freeformSheet = async function(macroId, name) {
+Actor.prototype.freeformSheet = async function(name) {
 	let character = this;
 	name = name.slugify().replace(/[^a-zA-Z0-9\- ]/g, '');
 	if (name == "config") return console.error("restricted name", name);
-	let macro = null;
-	macro = game.macros.get(macroId);
-	if (!macro) return console.error("macro not found. first parameter should be this.id");
-	
+	//let macro = null;
+	//macro = game.macros.get(macroId);
+	//if (!macro) return console.error("macro not found. first parameter should be this.id");
+	let sheet = game.settings.get('ffs', 'sheets')[name];
+	if (!sheet) return console.error(`sheet config for ${name} not found in game settings`);;
 	let id = `ffs-${name}-${character.id}`;
 	
 	if ($(`div#${id}`).length) 
 		return ui.windows[$(`div#${id}`).data().appid].render(true).bringToTop();
-	
-	if (!macro.flags.ffs?.config)
-		await macro.setFlag('ffs', 'config', {});
-	
-	if (!macro.flags.ffs?.config?.background) 
-		return new FilePicker({
-			type: "image",
-			displayMode: 'tiles',
-			callback: async (path) => {
-				await macro.setFlag('ffs', 'config.background', path);
-				macro.execute();
-				}
-			}).browse();
 
 	if (!character.flags.ffs?.[name]) 
     await character.setFlag('ffs', [name], {})
@@ -43,8 +31,7 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 	}, {});
 	await game.user.character.update(toDelete);
 
-	ffs[id] = {};
-	ffs[id] = {...ffs[id], ...character.flags.ffs[name].config, ...macro.flags.ffs.config};
+	ffs[id] = {...character.flags.ffs[name].config, ...sheet};
 
 	let options = {width: 'auto', height: 'auto', id}
 	if (ffs[id].width && ffs[id].height)
@@ -64,7 +51,6 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 		.focusout(async function(){
 			$(this).find('span').remove();
 			let input = $(this).html().trim();
-			console.log(key, input);
 			if (input == "" || input == "NEW TEXT") {
 				console.log(`removing span`, name, key)
 				await character.unsetFlag('ffs', `${name}.${key}`);
@@ -113,7 +99,6 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 				};
 			},
 			stop: async function(e, d){
-				//console.log(e.type, d.position)
 				await character.setFlag('ffs', [`${name}.${key}`], {x: d.position.left, y: d.position.top});
 				$(this).css('pointer-events', 'all')
 				$(this).parent().css({cursor:''});
@@ -122,7 +107,30 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 		.contextmenu(function(e){
 			e.stopPropagation();
 			e.preventDefault();
-			$(this).html(character.flags.ffs[name][key].text)
+			let text = character.flags.ffs[name][key].text
+			if (e.ctrlKey || text.includes('@UUID')) {
+				new Dialog({
+					title: key,
+					content: `<input type="text" value="${text}"></input>`,
+					buttons: {confirm: {label:"Confirm", icon: '<i class="fas fa-check"></i>', callback: async (html)=>{
+						confirm = true;
+						let input = html.find('input').val();
+						if (input == "" || input == "NEW TEXT") {
+							console.log(`removing span`, name, key)
+							await character.unsetFlag('ffs', `${name}.${key}`);
+							return $(this).remove();
+						}
+						$(this).html(TextEditor.enrichHTML(Roll.replaceFormulaData(input, {...character.toObject(), ...character.getRollData()})))
+						await character.setFlag('ffs', [`${name}.${key}`], {text: input});
+					}},
+					cancel: {label:"Cancel", icon: '<i class="fas fa-times"></i>',callback: async (html)=>{}}},
+					default: 'confirm',
+					close: ()=>{return}
+				}).render(true)
+
+				return;
+			}
+			$(this).html(text)
 			$(this).prop('role',"textbox")
 			$(this).prop('contenteditable',"true")
 			$(this).focus()
@@ -152,37 +160,6 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 			</style>`));
 			// remove dialog background
 			html.parent().css({background:'unset'});
-
-			// perform setup if macro config values come back undefined
-			if (left==undefined) {
-				let $img = $(`<img src="${background}" style="position: relative; cursor: crosshair">`)
-				.click(async function(e){
-          left = e.offsetX;
-          top = e.offsetY;
-					ffs[id].left = left;
-					ffs[id].top = top;
-					await macro.setFlag('ffs', 'config', {left, top}); 
-					d.render(true);
-				})
-        $sheet.append($img);
-				$sheet.parent().parent().parent().find('h4').text('Click the top left corner where the top left should be.');
-				return;
-			}
-			if (width==undefined) {
-				let $img = $(`<img src="${background}" style="position: relative; left: -${left}px; top: -${top}px; cursor: crosshair">`)
-				.click(async function(e){
-					width = e.offsetX-left;
-					height = e.offsetY-top;
-					ffs[id].width = width;
-					ffs[id].height = height;
-					await macro.setFlag('ffs', 'config', {width, height}); 
-					d.close();
-					Dialog.prompt({title: "Sheet Setup Complete", callback: ()=>{macro.execute()}});
-				})
-				$sheet.append($img)
-				$sheet.parent().parent().parent().find('h4').text('Click the bottom right corner where the bottom right should be.')
-				return ;
-			}
 
 			// apply config styles
 			$sheet.css({
@@ -214,8 +191,9 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 			.bind('drop', async function(e){
 				e.originalEvent.preventDefault();
 				let data = JSON.parse(e.originalEvent.dataTransfer.getData("Text"));
+				let text = fromUuidSync(data.uuid).link
 				let id = randomID();
-				let value = {x: e.offsetX, y: e.offsetY-8, text: fromUuidSync(data.uuid).link, fontSize: 16};
+				let value = {x: e.offsetX, y: e.offsetY-8, text, fontSize: 16};
 				await character.setFlag('ffs', [`${name}`], {[`${id}`]: value});
 				let $span = await newSpan(id, value);
 				$(this).append($span);
@@ -236,7 +214,30 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 		while (!d._element  && waitRender-- > 0) await new Promise((r) => setTimeout(r, 50));
 	// set header buttons
 	let $header  = d._element.find('header');
-	$header.find('h4.window-title').after($(`<a><i class="fas fa-cog"></i></a>`).click(function(e){
+	if (game.user.isGM)
+		$header.find('h4.window-title').after($(`<a><i class="fa-solid fa-cog"></i></a>`).click(async function(){
+			ffs.configure(name)
+		}));
+
+	$header.find('h4.window-title').after($(`<a><i class="fa-solid fa-circle-question"></i></a>`).click(function(e){
+		new Dialog({
+			title: `Freeform Sheet Help`,
+			content: `<center>
+			<p>Click somewhere with the text cursor to spawn a NEW TEXT.</p>
+			<p>Changes to the text will be saved on focus loss or pressing Enter. If there is no text entered or the value is still "NEW TEXT" the element will be removed.</p>
+			<p>Click and drag saved text elements to reposition</p>
+			<p>When hovering an element, the scroll wheel can be used to adjust the size of the text.</p>
+			<p>Entities can be dragged from the sidebar. Macros can be dragged from the hotbar or macro directory. These will create clickable links to content on the sheet.</p>
+			<p>The cog wheel in the header will show the font config. More fonts may be added in Foundry's core settings under <b>Additional Fonts</b>.</p>
+			</center>`,
+			buttons: {},
+			render: (html)=>{ 
+			},
+			close:(html)=>{ return }
+		},{width: 550}).render(true);
+	}));
+
+	$header.find('h4.window-title').after($(`<a><i class="fa-solid fa-font"></i></a>`).click(function(e){
 		new Dialog({
 			title: `Font Configuration`,
 			content: `
@@ -290,24 +291,46 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 		},{...$(this).offset(), width: 150}).render(true);
 	}));
 
-	$header.find('h4.window-title').after($(`<a><i class="fa-solid fa-circle-question"></i></a>`).click(function(e){
+	$header.find('h4.window-title').after($(`<a title="Sheet Filters" ><i class="fa-solid fa-eye"></i></a>`).click( async function(e){
+		e.stopPropagation();
+		let confirm = false;
+		let values = character.flags.ffs[name].config.filter.split('%').map(f=>f.split('(')).map((f,i)=>!i?f:[f[0].split(' ')[1], f[1]]).reduce((a,f)=>{ return {...a, [f[0]]: f[1]}; },{})
 		new Dialog({
-			title: `Freeform Sheet Help`,
+			title: `Filter Configuration`,
 			content: `<center>
-			<p>Click somewhere with the text cursor to spawn a NEW TEXT.</p>
-			<p>Changes to the text will be saved on focus loss or pressing Enter. If there is no text entered or the value is still "NEW TEXT" the element will be removed.</p>
-			<p>Click and drag saved text elements to reposition</p>
-			<p>When hovering an element, the scroll wheel can be used to adjust the size of the text.</p>
-			<p>Entities can be dragged from the sidebar. Macros can be dragged from the hotbar or macro directory. These will create clickable links to content on the sheet.</p>
-			<p>The cog wheel in the header will show the font config. More fonts may be added in Foundry's core settings under <b>Additional Fonts</b>.</p>
+			 grayscale<input type="range" min="0" max="100" value="${values.grayscale||0}" class="grayscale" data-filter="grayscale">
+			 sepia <input type="range" min="0" max="100" value="${values.sepia||0}" class="sepia" data-filter="sepia">
+			 invert<input type="range" min="0" max="100" value="${values.invert||0}" class="invert" data-filter="invert">
+			 saturate<input type="range" min="0" max="200" value="${values.saturate||100}" class="saturate" data-filter="saturate">
+			 contrast<input type="range" min="0" max="200" value="${values.contrast||100}" class="contrast" data-filter="contrast">
+			 brightness<input type="range" min="0" max="200" value="${values.brightness||100}" class="brightness" data-filter="brightness">
 			</center>`,
-			buttons: {},
-			render: (html)=>{ 
+			buttons: {
+				confirm: {label:"Confirm", icon: '<i class="fas fa-check"></i>', callback: async (html)=>{
+					confirm = true;
+					let filter = [...html.find('input[type=range]')].map(f=>f.dataset.filter+'('+f.value+'%)').join(' ');
+					await character.setFlag('ffs', [name], {config: {filter}});
+					ffs[id].filter = filter;
+				}},
+				cancel: {label:"Cancel", icon: '<i class="fas fa-times"></i>',callback: async (html)=>{}}
 			},
-			close:(html)=>{ return }
-		},{width: 550}).render(true);
+			default: 'confirm',
+			render: (html)=>{ 
+				html.find('input[type=range]').change(async function(){
+					let filter = [...html.find('input[type=range]')].map(f=>f.dataset.filter+'('+f.value+'%)').join(' ');
+					$(`#${id}`).find('.ffs').css({filter})
+				})
+			},
+			close:(html)=>{ 
+				if (confirm) return;
+				if (character.flags.ffs.config.filter) 
+						$(`#${id}`).find('.ffs').css({filter: character.flags.ffs[name].config.filter});
+					else
+						$(`#${id}`).find('.ffs').css({filter: 'unset'});
+				return }
+		},{...$(this).offset()}).render(true);
 	}));
-	
+
 	$header.find('h4.window-title').after($(`<a title="Zoom In" ><i class="fas fa-plus"></i></a>`).click( async function(e){
 		e.stopPropagation();
 		let {scale, width, height} = ffs[id];
@@ -339,45 +362,6 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 		d.render(true, { width: width*scale+16, height: height*scale+46});
 	}));
 
-	$header.find('h4.window-title').after($(`<a title="Toggle Invert" ><i class="fa-solid fa-eye"></i></a>`).click( async function(e){
-		e.stopPropagation();
-		let confirm = false;
-		let values = character.flags.ffs[name].config.filter.split('%').map(f=>f.split('(')).map((f,i)=>!i?f:[f[0].split(' ')[1], f[1]]).reduce((a,f)=>{ return {...a, [f[0]]: f[1]}; },{})
-		new Dialog({
-			title: `Filter Configuration`,
-			content: `<center>
-			 grayscale<input type="range" min="0" max="100" value="${values.grayscale||0}" class="grayscale" data-filter="grayscale">
-			 sepia <input type="range" min="0" max="100" value="${values.sepia||0}" class="sepia" data-filter="sepia">
-			 invert<input type="range" min="0" max="100" value="${values.invert||0}" class="invert" data-filter="invert">
-			 saturate<input type="range" min="0" max="200" value="${values.saturate||100}" class="saturate" data-filter="saturate">
-			 contrast<input type="range" min="0" max="200" value="${values.contrast||100}" class="contrast" data-filter="contrast">
-			 brightness<input type="range" min="0" max="200" value="${values.brightness||100}" class="brightness" data-filter="brightness">
-			</center>`,
-			buttons: {
-				confrim: {label:"Confirm", icon: '<i class="fas fa-check"></i>', callback: async (html)=>{
-					confirm = true;
-					let filter = [...html.find('input[type=range]')].map(f=>f.dataset.filter+'('+f.value+'%)').join(' ');
-					await character.setFlag('ffs', [name], {config: {filter}});
-					ffs[id].filter = filter;
-				}},
-				cancel: {label:"Cancel", icon: '<i class="fas fa-times"></i>',callback: async (html)=>{}}
-			},
-			render: (html)=>{ 
-				html.find('input[type=range]').change(async function(){
-					let filter = [...html.find('input[type=range]')].map(f=>f.dataset.filter+'('+f.value+'%)').join(' ');
-					$(`#${id}`).find('.ffs').css({filter})
-				})
-			},
-			close:(html)=>{ 
-				if (confirm) return;
-				if (character.flags.ffs.config.filter) 
-						$(`#${id}`).find('.ffs').css({filter: character.flags.ffs[name].config.filter});
-					else
-						$(`#${id}`).find('.ffs').css({filter: 'unset'});
-				return }
-		},{...$(this).offset()}).render(true);
-	}));
-
 	// I do not use the document.apps because it causes renders on every flag change I do. This way, I can ignore reloads on all ffs updates
 	// character.apps[d.appId] = d;
 	
@@ -393,10 +377,223 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 
 var ffs = {};
 
-ffs.resetMacroConfig = async function(macroId) {
-  await game.macros.get(macroId).update({'flags.-=ffs':null})
+ffs.configure = async function(name) {
+	
+	let config = game.settings.get('ffs', 'sheets')[name];
+	if (!config) {
+			let sheets = {...game.settings.get('ffs', 'sheets'), ...{[name]: {}}}
+			game.settings.set('ffs', 'sheets', sheets);
+	}
+	let i = await loadTexture(config.background);
+	let width = i.orig.width;
+	let height = i.orig.height;
+	let confirm = false;
+	let d = new Dialog({
+		title: name,
+		content: `<div class="ffs" style="position: relative; width: ${width}px; height:${height}px; margin: 20px;">
+			<img src="${config.background}" style="position: absolute;">
+			<div class="sizer ui-widget-content" style="background: unset; position: absolute; left: ${config.left}px; top:${config.top}px; width:${config.width}px; height: ${config.height}px; border: 2px dashed red;"></div>
+		</div>`,
+		buttons: {confirm: {label:"Confirm", icon: '<i class="fas fa-check"></i>', callback: async (html)=>{
+			confirm = true;
+			let sheets = {...game.settings.get('ffs', 'sheets'), ...{[name]: config}}
+			game.settings.set('ffs', 'sheets', sheets);
+			return true;
+			//await macro.setFlag('ffs', 'config', config)
+		}},
+		cancel: {label:"Cancel", icon: '<i class="fas fa-times"></i>',callback: async (html)=>{}}},
+		render: (html)=>{
+			//html.css({height: 'max-content !important'});
+			html.find('div.sizer').resizable({
+				stop: async function( event, ui ) {
+					config = {...config, ...ui.position, ...ui.size}
+				}
+			}).draggable({
+				stop: async function( event, ui ) {
+					config = {...config, ...ui.position}
+				}
+			})
+			d._element.find('h4.window-title').after($(`<a title="Change Image" ><i class="fa-solid fa-image"></i></a>`).click(async function(){
+				return new FilePicker({
+					type: "image",
+					displayMode: 'tiles',
+					callback: async (path) => {
+							//d.close();
+							//await macro.setFlag('ffs', 'config.background', path);
+							let i = await loadTexture(path);
+							width = i.orig.width;
+							height = i.orig.height;
+							config.background = path;
+							config.width = width;
+							config.height = height;
+							config.left = 1;
+							config.top = 1;
+							html.find('div.ffs').css({height, width});
+							html.find('div.sizer').css({height, width, left: 0, top: 0});
+							html.find('img').attr('src', path)
+							d.setPosition()
+						}
+					}).browse();
+			}));
+			
+		},
+		close: async (html)=>{ return false;}
+	}, {height: 'auto', width: 'auto'}).render(true);
+  //await game.macros.get(macroId).update({'flags.-=ffs':null})
 }
 
+class ffsSettingsApp extends Dialog {
+  
+  constructor(data, options) {
+    super(options);
+    this.data = {
+		title: `Freeform Sheets Configuration`,
+		content: `<button class="add" style="margin-bottom: 1em;"><i class="fas fa-plus"></i>Add Sheet</button><center class="sheets"></center>`,
+		render: (html)=>{
+			let d = this;
+			html.find('.sheets').append($(Object.entries(game.settings.get('ffs', 'sheets')).reduce((a, [name, config])=> {
+				return a+=`<div><h3>${name}<a class="delete" name="${name}" style="float:right"><i class="fas fa-times"></i></a></h3>
+				<a class="configure" name="${name}" ><img src="${config.background}" height=300></a></div>`}	,``)));
+			d.setPosition({height: 'auto'});
+			html.find('a.configure').click(function(){ffs.configure(this.name);});
+			html.find('a.delete').click(async function(){
+				let del = await Dialog.prompt({title:`Delete sheet ${this.name}?`,content:``, callback:(html)=>{return true}, rejectClose: false},{width:100});
+				if (!del) return;
+				let sheets = foundry.utils.deepClone(game.settings.get('ffs', 'sheets'));
+				delete sheets[this.name];
+				await game.settings.set('ffs', 'sheets', sheets);
+				d.render(true);
+			});
+			html.find('button.add').click(async function(){
+				let name = await Dialog.prompt({
+					title:'Input sheet Name',
+					content:`<input type="text" style="text-align: center;" autofocus></input>`, 
+					callback:(html)=>{return html.find('input').val()}
+				},{width:100});
+				name = name.slugify().replace(/[^a-zA-Z0-9\- ]/g, '');
+				if (!name) return ui.notifications.warn('Sheets must have a name.');
+				if (Object.keys(game.settings.get('ffs', 'sheets')).includes(name)) return ui.notifications.warn('That sheet name is already in use.');
+				new FilePicker({
+					type: "image",
+					displayMode: 'tiles',
+					callback: async (path) => { 
+							let i = await loadTexture(path);
+							let config = {background: path, width: i.orig.width, height: i.orig.height, left: 1, top: 1};
+							let sheets = {...game.settings.get('ffs', 'sheets'), ...{[name]: config}};
+							await game.settings.set('ffs', 'sheets', sheets);
+							ffs.configure(name);
+							d.render(true);
+						}
+				}).render(true);
+				
+			})
+		},
+		buttons: {
+			//confirm: {label:"Confirm", icon: '<i class="fas fa-check"></i>', callback: async (html)=>{return}},
+		},
+		close: async (html)=>{ return;},}
+};
+
+  static get defaultOptions() {
+    return foundry.utils.mergeObject(super.defaultOptions, {
+      id: `freeform-sheets-module-settings`,
+			height: 'auto',
+			width: 'auto',
+    	zIndex: 100,
+    });
+  }
+
+  static getActiveApp() {
+    return Object.values(ui.windows).find(app => app.id === "ffs-sheets-module-settings");
+  }
+  
+  static async show(options = {}, dialogData = {}) {
+    const app = this.getActiveApp()
+    if (app) return app.render(false, { focus: true });
+    return new Promise((resolve) => {
+      options.resolve = resolve;
+      new this(options, {	}).render(true, { focus: true });
+    })
+  }
+}
+
+class SettingsShim extends FormApplication {
+  
+  /**
+   * @inheritDoc
+   */
+  constructor() {
+    super({});
+    ffsSettingsApp.show({});
+  }
+  
+  async _updateObject(event, formData) {
+  }
+  
+  render() {
+    this.close();
+  }
+  
+}
+
+// full reset of a sheet for an actor
 ffs.resetActorSheet = async function(actorId, name) {
   await game.actors.get(actorId).unsetFlag('ffs', name)
 }
+
+Hooks.once("init", async () => {
+	game.settings.registerMenu("ffs", "ffsConfigurationMenu", {
+		name: "Freeform Sheets Configuration",
+		label: "Configuration",      // The text label used in the button
+		hint: "Configuration for Freeform Sheets",
+		icon: "fas fa-bars",               // A Font Awesome icon used in the submenu button
+		type: SettingsShim,   // A FormApplication subclass which should be created
+		restricted: true                   // Restrict this submenu to gamemaster only?
+	});
+
+	game.settings.register("ffs", "sheets", {
+		name: "Freeform Sheets",
+		hint: "Configurations for Freeform Sheets",
+		scope: "world",      
+		config: false,       
+		type: Object,
+		default: {},         
+		onChange: value => { 
+			$('div[id^=ffs]').each(function(){
+				ui.windows[$(this).data().appid].close()
+		})
+		}
+	});
+});
+
+// add actor director context menu options for each sheet
+
+Hooks.on('getActorDirectoryEntryContext', (app, options)=>{
+	for (let name of Object.keys(game.settings.get('ffs', 'sheets')))
+		options.push(
+			{
+				"name": `${name.capitalize()} Freeform Sheet`,
+				"icon": `<i class="fa-solid fa-file-lines"></i>`,
+				"element": {},
+				condition: li => {
+          return true
+        },
+        callback: li => {
+          const actor = game.actors.get(li.data("documentId"));
+					actor.freeformSheet(name);
+        }
+			}
+		)
+})
+
+
+// migration of macro configs
+Hooks.on('ready', ()=>{
+	if (Object.keys(game.settings.get('ffs', 'sheets')).length) return;
+	game.settings.set('ffs', 'sheets', game.macros.filter(m=>m.flags.ffs?.config).reduce((a,m)=> {
+		let config = m.flags.ffs?.config;
+		if (!config.background) return a;
+		return {...a, [m.command.match(/freeformSheet\((.*?)\)/)[0].match(/\'(.*?)\'/)[1]] : 
+            m.flags.ffs.config}
+		}	,{}))
+})
