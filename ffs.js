@@ -81,7 +81,7 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 			return $(this).blur();
 		})
 		.focusin(function(){
-			$(this).text(character.flags.ffs[name][key].value)
+			
 			$(this).select()
 			let selection = window.getSelection();
 			let range = document.createRange();
@@ -122,6 +122,7 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 		.contextmenu(function(e){
 			e.stopPropagation();
 			e.preventDefault();
+			$(this).html(character.flags.ffs[name][key].text)
 			$(this).prop('role',"textbox")
 			$(this).prop('contenteditable',"true")
 			$(this).focus()
