@@ -30,14 +30,20 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 				}
 			}).browse();
 
-	if (!character.flags.ffs?.[`${name}`]) 
-    await character.setFlag('ffs', [`${name}`], {})
+	if (!character.flags.ffs?.[name]) 
+    await character.setFlag('ffs', [name], {})
 	if (!character.flags.ffs?.config)
 		await character.setFlag('ffs', 'config', {scale: 1, color: "#000000", invert: false, filter: ''});
 	
+	// perform cleanup of empty and NEW TEXT. Should not be necessary
+	let toDelete = Object.entries(character.flags.ffs[name] ?? {}).reduce((acc, [a,{text}]) => {
+		if (text.trim()=="" || text.trim() === "NEW TEXT") acc[`flags.ffs.${name}.-=${a}`] = null;
+		return acc;
+	}, {});
+	await game.user.character.update(toDelete);
+
 	ffs[id] = {};
-	ffs[id] = {...ffs[id], ...character.flags.ffs.config};
-	ffs[id] = {...ffs[id], ...macro.flags.ffs.config};
+	ffs[id] = {...ffs[id], ...character.flags.ffs.config, ...macro.flags.ffs.config};
 
 	let options = {width: 'auto', height: 'auto', id}
 	if (ffs[id].width && ffs[id].height)
@@ -48,31 +54,40 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 	}
 	
 	let newSpan = async function(key, value){
-		let $span = $(`<span id="${key}">${TextEditor.enrichHTML(Roll.replaceFormulaData(value.text, {...character.toObject(), ...character.getRollData()}))}
+		let $span = $(`<span id="${key}">
+			${TextEditor.enrichHTML(Roll.replaceFormulaData(value.text, {...character.toObject(), ...character.getRollData()}))}
 		<span>`);
-		$span.css({position:'absolute', left: value.x+'px', top: value.y+'px', color: 'black', fontSize: value.fontSize, cursor: 'grab'})
+		$span.css({position:'absolute', left: value.x+'px', top: value.y+'px', color: 'black', fontSize: value.fontSize})
 		let click = {x: 0, y: 0};
 		$span
-		.contextmenu(async function(e){
-			e.stopPropagation();
-			e.preventDefault();
-			let value = character.flags.ffs[name][key];
-			let $input = $(`<input type="text" value="${value.text}" size=${value.text.length} style="height:${$(this).css('height')}; width: ${$(this).parent().parent().width()}px; font-size: ${value.fontSize} ">`)
-			.on('focusout keydown', async function(e){
-				e.stopPropagation();
-				if (e.keyCode != 13 && e.type == 'keydown') return;
-				if ($(this).val().trim()=="" || $(this).val() == "NEW TEXT") {
-					await character.unsetFlag('ffs', `${name}.${key}`);
-					return $(this).parent().remove();
-				}
-				$(this).parent().html(TextEditor.enrichHTML(Roll.replaceFormulaData($(this).val(), {...character.toObject(), ...character.getRollData()})))
-				await character.setFlag('ffs', [`${name}.${key}`], {text: $(this).val().trim()});
-				$(this).remove();
-			})
-			.click(function(e){e.stopPropagation();});
-			$(this).text('');
-			$(this).append($input);
-			$input.select();
+		.focusout(async function(){
+			$(this).find('span').remove();
+			let input = $(this).html().trim();
+			console.log(key, input);
+			if (input == "" || input == "NEW TEXT") {
+				console.log(`removing span`, name, key)
+				await character.unsetFlag('ffs', `${name}.${key}`);
+				return $(this).remove();
+			}
+			$(this).html(TextEditor.enrichHTML(Roll.replaceFormulaData(input, {...character.toObject(), ...character.getRollData()})))
+			await character.setFlag('ffs', [`${name}.${key}`], {text: input});
+			$(this).draggable('enable')
+			$(this).prop('role',"")
+			$(this).prop('contenteditable',"false")
+		})
+		.keydown(function(e){
+			if (e.key != "Enter") return;
+			return $(this).blur();
+		})
+		.focusin(function(){
+			$(this).text(character.flags.ffs[name][key].value)
+			$(this).select()
+			let selection = window.getSelection();
+			let range = document.createRange();
+			range.selectNodeContents(this);
+			selection.removeAllRanges();
+			selection.addRange(range);
+			$(this).draggable('disable')
 		})
 		.bind("wheel", async function(e) {
 			let delta = e.originalEvent.wheelDelta>0?-1:1;
@@ -82,30 +97,40 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 			await character.setFlag('ffs', [`${name}.${key}`], {fontSize: fontSize, y: top});
 		})
 		.draggable({
-			start: async function( event, data ) {
-				$(this).css({cursor:'grabbing'});
-				click.x = event.clientX;
-				click.y = event.clientY;
+			start: function(e){
+				$(this).parent().css({cursor:'grabbing'});
+				$(this).css('pointer-events', 'none')
+				click.x = e.clientX;
+				click.y = e.clientY;
 			},
-			stop: async function( event, data ) {
-				await character.setFlag('ffs', [`${name}.${key}`], {x: data.position.left, y: data.position.top});
-				$(this).css({cursor:'grab'})
-			},
-			drag: function(event, data) {
+			drag: function(e, data) {
 				let scale = Number($(this).parent().css('transform').split('matrix(')[1].split(',')[0])
 				let original = data.originalPosition;
 				data.position = {
-				  left: (event.clientX-click.x+original.left)/scale,
-					top:  (event.clientY-click.y+original.top )/scale
+				  left: (e.clientX-click.x+original.left)/scale,
+					top:  (e.clientY-click.y+original.top )/scale
 				};
+			},
+			stop: async function(e, d){
+				//console.log(e.type, d.position)
+				await character.setFlag('ffs', [`${name}.${key}`], {x: d.position.left, y: d.position.top});
+				$(this).css('pointer-events', 'all')
+				$(this).parent().css({cursor:''});
 			}
+		})
+		.contextmenu(function(e){
+			e.stopPropagation();
+			e.preventDefault();
+			$(this).prop('role',"textbox")
+			$(this).prop('contenteditable',"true")
+			$(this).focus()
 		})
 		return $span;
 	}
 
 	let d = new Dialog({
 		title: `${character.name}`,
-		content: `<div class="ffs" style="position: relative; cursor: text;"></div>`,
+		content: `<div class="ffs"></div>`,
 		buttons: {},
 		render: async (html)=>{
 			//console.log(`${id} render`)
@@ -114,11 +139,13 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 			// apply configs
 			html.css({height: 'max-content !important'});
 			let $sheet = html.find('div.ffs');
+
 			$sheet.before($(`<style>
-			#${id} > section.window-content > div.dialog-content > div.ffs {font-family: ${fontFamily}; font-weight: ${fontWeight}}
+				#${id} > section.window-content > div.dialog-content > div.ffs {font-family: ${fontFamily}; font-weight: ${fontWeight}; cursor: cell; position: relative;}
         #${id} > section.window-content > div.dialog-content > div.ffs * {border: unset !important; padding: 0; background: unset; background-color: unset; color: ${color} !important;} 
         #${id} > section.window-content > div.dialog-content > div.ffs > span > input:focus {box-shadow: unset; } 
-				#${id} > section.window-content > div.dialog-content > div.ffs > span { white-space: nowrap; }
+				#${id} > section.window-content > div.dialog-content > div.ffs > span:focus-visible {outline-color:white; outline:unset; /*outline-style: outset; outline-offset: 6px;*/}
+				#${id} > section.window-content > div.dialog-content > div.ffs > span { white-space: nowrap; cursor: text; position: absolute; }
 				#${id} > section.window-content , #${id} > section.window-content > div.dialog-content > div.ffs {overflow:hidden;}
 			</style>`));
 			// remove dialog background
@@ -171,7 +198,8 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 				$sheet.append(await newSpan(key, value));
 			
 			// apply sheet events for creating new spans
-			$sheet.click(async function(e){
+			
+			$sheet.contextmenu(async function(e){
 				if (e.originalEvent.target.nodeName != "DIV") return;
 				let id = randomID();
 				let value = {x: e.offsetX, y: e.offsetY-8, text: "NEW TEXT", fontSize: 16};
@@ -179,7 +207,6 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 				let $span = await newSpan(id, value);
 				$(this).append($span);
 				$span.contextmenu();
-				
 			})
 			.bind('drop', async function(e){
 				e.originalEvent.preventDefault();
@@ -193,7 +220,7 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 		},
 		close: async (html)=>{
 				if (ffs[id].hook) Hooks.off('', ffs[id].hook);
-				delete ffs[id];
+				//delete ffs[id];
 				//delete character.apps[d.appId];
 				return;
 			}
@@ -265,7 +292,7 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 			title: `Freeform Sheet Help`,
 			content: `<center>
 			<p>Click somewhere with the text cursor to spawn a NEW TEXT.</p>
-			<p> Changes to the text will be saved on focus loss or pressing Enter. If there is no text entered or the value is still "NEW TEXT" the element will be removed.</p>
+			<p>Changes to the text will be saved on focus loss or pressing Enter. If there is no text entered or the value is still "NEW TEXT" the element will be removed.</p>
 			<p>Click and drag saved text elements to reposition</p>
 			<p>When hovering an element, the scroll wheel can be used to adjust the size of the text.</p>
 			<p>Entities can be dragged from the sidebar. Macros can be dragged from the hotbar or macro directory. These will create clickable links to content on the sheet.</p>
@@ -308,16 +335,7 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 		await character.setFlag('ffs', 'config.scale', scale);
 		d.render(true, { width: width*scale+16, height: height*scale+46});
 	}));
-/*
-	$header.find('h4.window-title').after($(`<a title="Toggle Invert" ><i class="fa-${ffs[id].invert?'regular':'solid'} fa-eye"></i></a>`).click( async function(e){
-		e.stopPropagation();
-		ffs[id].invert = !ffs[id].invert;
-		d.element.find('div.ffs').css({filter: `${ffs[id].invert?'invert(90%)':'unset'}`});
-		$(this).find('i').removeClass('fa-solid').removeClass('fa-regular');
-		$(this).find('i').addClass(`${ffs[id].invert?'fa-regular':'fa-solid'}`);
-		await character.setFlag('ffs', 'config', {invert: ffs[id].invert});
-	}));
-*/
+
 	$header.find('h4.window-title').after($(`<a title="Toggle Invert" ><i class="fa-solid fa-eye"></i></a>`).click( async function(e){
 		e.stopPropagation();
 		let confirm = false;
@@ -333,14 +351,13 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 			 brightness<input type="range" min="0" max="200" value="${values.brightness||100}" class="brightness" data-filter="brightness">
 			</center>`,
 			buttons: {
-				confrim: {label:"confirm", callback: async (html)=>{
+				confrim: {label:"Confirm", icon: '<i class="fas fa-check"></i>', callback: async (html)=>{
 					confirm = true;
 					let filter = [...html.find('input[type=range]')].map(f=>f.dataset.filter+'('+f.value+'%)').join(' ');
 					await character.setFlag('ffs', 'config.filter', filter);
 					ffs[id].filter = filter;
 				}},
-				cancel: {label:"cancel", callback: async (html)=>{
-				}}
+				cancel: {label:"Cancel", icon: '<i class="fas fa-times"></i>',callback: async (html)=>{}}
 			},
 			render: (html)=>{ 
 				html.find('input[type=range]').change(async function(){
@@ -355,12 +372,12 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 					else
 						$(`#${id}`).find('.ffs').css({filter: 'unset'});
 				return }
-		}).render(true);
+		},{...$(this).offset()}).render(true);
 	}));
 
 	// I do not use the document.apps because it causes renders on every flag change I do. This way, I can ignore reloads on all ffs updates
 	// character.apps[d.appId] = d;
-	if (!d) return;
+	
 	if (ffs[id].hook) Hooks.off('', ffs[id].hook)
 	ffs[id].hook = 
 		Hooks.on(`update${this.documentName}`, (doc, updates)=>{
