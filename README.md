@@ -30,5 +30,6 @@ Fonts can be added through the core font settings.
   - Sheet configs moved out of macro flags into world settings
   - better configuraton ui using jquery resizeable
   - re-ordered header icons
+  - Context Menu items added to actor directory for each sheet. (requires reload to reflect sheet adds and deletes)
 
 ![Freefrom Sheet Example](https://github.com/xaukael/ffs/blob/248ea21e6173638bd022dd68055fe5554ab6f847/ffs-example.jpg)
