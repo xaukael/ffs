@@ -22,5 +22,8 @@ Fonts can be added through the core font settings.
   
 1.1.0
   - Filters and Fonts per player and per sheet now
+  
+1.1.1
+  - Fixed broken fonts with config move
 
 ![Freefrom Sheet Example](https://github.com/xaukael/ffs/blob/35a75c6696b1e596710af6bf8db9357139f5d77a/ffs-example.jpg)
