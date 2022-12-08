@@ -264,7 +264,7 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 					ffs[id].fontFamily = fontFamily;
 					$(this).css({fontFamily});
 					$(this).next().css({fontFamily});
-					await character.setFlag('ffs', 'config', {fontFamily});
+					await character.setFlag('ffs', name, {config: {fontFamily}});
 					d.render(true);
 				});
 				
@@ -273,7 +273,7 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 					ffs[id].fontWeight = fontWeight;
 					$(this).css({fontWeight});
 					$(this).prev().css({fontWeight});
-					await character.setFlag('ffs', 'config', {fontWeight});
+					await character.setFlag('ffs', name, {config: {fontWeight}});
 					d.render(true);
 				});
 
@@ -281,7 +281,7 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 					let color = $(this).val();
 					ffs[id].color = color;
 					$(this).prevAll().css({color});
-					await character.setFlag('ffs', 'config', {color})
+					await character.setFlag('ffs', name, {config: {color}})
 					d.render(true);
 				});
 			},
