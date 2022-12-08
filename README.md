@@ -17,7 +17,7 @@ Fonts can be added through the core font settings.
   - fixed a bug where filter would not default correctly
 
 1.0.0
-  - we will call this version 1. inputs are gone, the spans are just set as role="textbox" now. 
+  - We will call this version 1. inputs are gone, the spans are just set as role="textbox" now. 
   - Controls have not changed, though the cursors have to better indicate what is going on.
 
 ![Freefrom Sheet Example](https://github.com/xaukael/ffs/blob/35a75c6696b1e596710af6bf8db9357139f5d77a/ffs-example.jpg)
