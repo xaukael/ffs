@@ -32,18 +32,19 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 
 	if (!character.flags.ffs?.[name]) 
     await character.setFlag('ffs', [name], {})
-	if (!character.flags.ffs?.config)
-		await character.setFlag('ffs', 'config', {scale: 1, color: "#000000", invert: false, filter: ''});
+	if (!character.flags.ffs?.[name].config)
+		await character.setFlag('ffs', [name], {config: {scale: 1, color: "#000000", filter: ''}});
 	
 	// perform cleanup of empty and NEW TEXT. Should not be necessary
 	let toDelete = Object.entries(character.flags.ffs[name] ?? {}).reduce((acc, [a,{text}]) => {
+		if (a == 'config') return acc;
 		if (text.trim()=="" || text.trim() === "NEW TEXT") acc[`flags.ffs.${name}.-=${a}`] = null;
 		return acc;
 	}, {});
 	await game.user.character.update(toDelete);
 
 	ffs[id] = {};
-	ffs[id] = {...ffs[id], ...character.flags.ffs.config, ...macro.flags.ffs.config};
+	ffs[id] = {...ffs[id], ...character.flags.ffs[name].config, ...macro.flags.ffs.config};
 
 	let options = {width: 'auto', height: 'auto', id}
 	if (ffs[id].width && ffs[id].height)
@@ -134,7 +135,7 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 		buttons: {},
 		render: async (html)=>{
 			//console.log(`${id} render`)
-			let {width, height, left, top, background, color , scale , fontFamily, fontWeight, invert, filter} = ffs[id];
+			let {width, height, left, top, background, color , scale , fontFamily, fontWeight, filter} = ffs[id];
 
 			// apply configs
 			html.css({height: 'max-content !important'});
@@ -195,7 +196,8 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 
 			// make spans
 			for (const [key, value] of Object.entries(character.flags.ffs[name])) 
-				$sheet.append(await newSpan(key, value));
+				if (key=='config') continue;
+				else $sheet.append(await newSpan(key, value));
 			
 			// apply sheet events for creating new spans
 			
@@ -243,7 +245,7 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 			`,
 			buttons: {},
 			render: (html)=>{ 
-				html.parent().css({'color': 'white', 'filter': `${ffs[id].invert?'invert(90%)':'unset'}`});
+				html.parent().css({'color': 'white', 'filter': `${ffs[id].filter}`});
 				let $fontFamily = html.find('.fontFamily');
 				let $fontWeight = html.find('.fontWeight');
 				let $fontColor = html.find('.fontColor');
@@ -339,7 +341,7 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 	$header.find('h4.window-title').after($(`<a title="Toggle Invert" ><i class="fa-solid fa-eye"></i></a>`).click( async function(e){
 		e.stopPropagation();
 		let confirm = false;
-		let values = character.flags.ffs.config.filter.split('%').map(f=>f.split('(')).map((f,i)=>!i?f:[f[0].split(' ')[1], f[1]]).reduce((a,f)=>{ return {...a, [`${f[0]}`]: f[1]}; },{})
+		let values = character.flags.ffs[name].config.filter.split('%').map(f=>f.split('(')).map((f,i)=>!i?f:[f[0].split(' ')[1], f[1]]).reduce((a,f)=>{ return {...a, [f[0]]: f[1]}; },{})
 		new Dialog({
 			title: `Filter Configuration`,
 			content: `<center>
@@ -354,7 +356,7 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 				confrim: {label:"Confirm", icon: '<i class="fas fa-check"></i>', callback: async (html)=>{
 					confirm = true;
 					let filter = [...html.find('input[type=range]')].map(f=>f.dataset.filter+'('+f.value+'%)').join(' ');
-					await character.setFlag('ffs', 'config.filter', filter);
+					await character.setFlag('ffs', [name], {config: {filter}});
 					ffs[id].filter = filter;
 				}},
 				cancel: {label:"Cancel", icon: '<i class="fas fa-times"></i>',callback: async (html)=>{}}
@@ -368,7 +370,7 @@ Actor.prototype.freeformSheet = async function(macroId, name) {
 			close:(html)=>{ 
 				if (confirm) return;
 				if (character.flags.ffs.config.filter) 
-						$(`#${id}`).find('.ffs').css({filter: character.flags.ffs.config.filter});
+						$(`#${id}`).find('.ffs').css({filter: character.flags.ffs[name].config.filter});
 					else
 						$(`#${id}`).find('.ffs').css({filter: 'unset'});
 				return }
