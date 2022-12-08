@@ -25,5 +25,10 @@ Fonts can be added through the core font settings.
   
 1.1.1
   - Fixed broken fonts with config move
+  
+1.2.0
+  - Sheet configs moved out of macro flags into world settings
+  - better configuraton ui using jquery resizeable
+  - re-ordered header icons
 
 ![Freefrom Sheet Example](https://github.com/xaukael/ffs/blob/35a75c6696b1e596710af6bf8db9357139f5d77a/ffs-example.jpg)
