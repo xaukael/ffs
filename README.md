@@ -31,4 +31,4 @@ Fonts can be added through the core font settings.
   - better configuraton ui using jquery resizeable
   - re-ordered header icons
 
-![Freefrom Sheet Example](https://github.com/xaukael/ffs/blob/35a75c6696b1e596710af6bf8db9357139f5d77a/ffs-example.jpg)
+![Freefrom Sheet Example](https://github.com/xaukael/ffs/blob/248ea21e6173638bd022dd68055fe5554ab6f847/ffs-example.jpg)
