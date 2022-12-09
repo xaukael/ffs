@@ -29,7 +29,7 @@ Actor.prototype.freeformSheet = async function(name) {
 		if (text.trim()=="" || text.trim() === "NEW TEXT") acc[`flags.ffs.${name}.-=${a}`] = null;
 		return acc;
 	}, {});
-	await game.user.character.update(toDelete);
+	await character.update(toDelete);
 
 	ffs[id] = {...character.flags.ffs[name].config, ...sheet};
 
@@ -42,7 +42,7 @@ Actor.prototype.freeformSheet = async function(name) {
 	}
 	
 	let newSpan = async function(key, value){
-		let $span = $(`<span id="${key}">
+		let $span = $(`<span id="${key}" style="cursor: text;">
 			${TextEditor.enrichHTML(Roll.replaceFormulaData(value.text, {...character.toObject(), ...character.getRollData()}))}
 		<span>`);
 		$span.css({position:'absolute', left: value.x+'px', top: value.y+'px', color: 'black', fontSize: value.fontSize})
@@ -85,8 +85,8 @@ Actor.prototype.freeformSheet = async function(name) {
 		})
 		.draggable({
 			start: function(e){
-				$(this).parent().css({cursor:'grabbing'});
-				$(this).css('pointer-events', 'none')
+				//$(this).css('pointer-events', 'none')
+				$(this).css('cursor', 'grabbing');
 				click.x = e.clientX;
 				click.y = e.clientY;
 			},
@@ -97,11 +97,12 @@ Actor.prototype.freeformSheet = async function(name) {
 				  left: (e.clientX-click.x+original.left)/scale,
 					top:  (e.clientY-click.y+original.top )/scale
 				};
+				$(this).css('cursor', 'grabbing');
 			},
 			stop: async function(e, d){
 				await character.setFlag('ffs', [`${name}.${key}`], {x: d.position.left, y: d.position.top});
-				$(this).css('pointer-events', 'all')
-				$(this).parent().css({cursor:''});
+				//$(this).css('pointer-events', 'all')
+				$(this).css('cursor','text');
 			}
 		})
 		.contextmenu(function(e){
@@ -155,7 +156,7 @@ Actor.prototype.freeformSheet = async function(name) {
         #${id} > section.window-content > div.dialog-content > div.ffs * {border: unset !important; padding: 0; background: unset; background-color: unset; color: ${color} !important;} 
         #${id} > section.window-content > div.dialog-content > div.ffs > span > input:focus {box-shadow: unset; } 
 				#${id} > section.window-content > div.dialog-content > div.ffs > span:focus-visible {outline-color:white; outline:unset; /*outline-style: outset; outline-offset: 6px;*/}
-				#${id} > section.window-content > div.dialog-content > div.ffs > span { white-space: nowrap; cursor: text; position: absolute; }
+				#${id} > section.window-content > div.dialog-content > div.ffs > span { white-space: nowrap;  position: absolute; }
 				#${id} > section.window-content , #${id} > section.window-content > div.dialog-content > div.ffs {overflow:hidden;}
 			</style>`));
 			// remove dialog background
@@ -247,7 +248,7 @@ Actor.prototype.freeformSheet = async function(name) {
 			`,
 			buttons: {},
 			render: (html)=>{ 
-				html.parent().css({'color': 'white', 'filter': `${ffs[id].filter}`});
+				//html.parent().css({'background-color': 'white', 'background': 'unset', 'filter': `${ffs[id].filter}`});
 				let $fontFamily = html.find('.fontFamily');
 				let $fontWeight = html.find('.fontWeight');
 				let $fontColor = html.find('.fontColor');
@@ -295,7 +296,7 @@ Actor.prototype.freeformSheet = async function(name) {
 		e.stopPropagation();
 		let confirm = false;
 		let values = character.flags.ffs[name].config.filter.split('%').map(f=>f.split('(')).map((f,i)=>!i?f:[f[0].split(' ')[1], f[1]]).reduce((a,f)=>{ return {...a, [f[0]]: f[1]}; },{})
-		new Dialog({
+		let filterConfig = new Dialog({
 			title: `Filter Configuration`,
 			content: `<center>
 			 grayscale<input type="range" min="0" max="100" value="${values.grayscale||0}" class="grayscale" data-filter="grayscale">
