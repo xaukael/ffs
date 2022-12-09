@@ -2,7 +2,7 @@
 {
     "id": "ffs",
     "title": "Freeform Sheet",
-    "description": "Allows creation of macros for configurable sheets from image files that you can place text of any size anywhere.",
+    "description": "Create character sheets from just images. Put text and content links anywhere at any size",
     "author": "Xaukael",
     "version": "1.2.0",
     "minimumCoreVersion": "10",
