@@ -1,7 +1,5 @@
 # Freeform Sheets
-Allows creation of macros for any number of configurable sheets for your character from image files that you can place text of any size anywhere.
-
-Example script macro command: `character.freeformSheet(this.id, 'dnd5e');`
+Allows creation of any number of configurable sheets for your character from image files.
 
 Supports: inline rolls, entity links, other enriched data, @attribute replacement for core actor fields as well as roll data.
 
