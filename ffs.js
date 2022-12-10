@@ -32,7 +32,7 @@ Actor.prototype.freeformSheet = async function(name) {
 	await character.update(toDelete);
 
 	ffs[id] = {...character.flags.ffs[name].config, ...sheet};
-
+	console.log(ffs[id])
 	let options = {width: 'auto', height: 'auto', id}
 	if (ffs[id].width && ffs[id].height)
 		options = {...options,...{width: ffs[id].width*ffs[id].scale+16, height: ffs[id].height*ffs[id].scale+46}};
@@ -43,7 +43,7 @@ Actor.prototype.freeformSheet = async function(name) {
 	
 	let newSpan = async function(key, value){
 		let $span = $(`<span id="${key}" style="cursor: text;">
-			${TextEditor.enrichHTML(Roll.replaceFormulaData(value.text, {...character.toObject(), ...character.getRollData()}))}
+			${TextEditor.enrichHTML(Roll.replaceFormulaData(value.text, {...character.getRollData(), name: character.name}))}
 		<span>`);
 		$span.css({position:'absolute', left: value.x+'px', top: value.y+'px', color: 'black', fontSize: value.fontSize})
 		let click = {x: 0, y: 0};
@@ -56,7 +56,7 @@ Actor.prototype.freeformSheet = async function(name) {
 				await character.unsetFlag('ffs', `${name}.${key}`);
 				return $(this).remove();
 			}
-			$(this).html(TextEditor.enrichHTML(Roll.replaceFormulaData(input, {...character.toObject(), ...character.getRollData()})))
+			$(this).html(TextEditor.enrichHTML(Roll.replaceFormulaData(input,{...character.getRollData(), name: character.name})))
 			await character.setFlag('ffs', [`${name}.${key}`], {text: input});
 			$(this).draggable('enable')
 			$(this).prop('role',"")
@@ -67,7 +67,6 @@ Actor.prototype.freeformSheet = async function(name) {
 			return $(this).blur();
 		})
 		.focusin(function(){
-			
 			$(this).select()
 			let selection = window.getSelection();
 			let range = document.createRange();
@@ -77,9 +76,9 @@ Actor.prototype.freeformSheet = async function(name) {
 			$(this).draggable('disable')
 		})
 		.bind("wheel", async function(e) {
-			let delta = e.originalEvent.wheelDelta>0?-1:1;
-			let fontSize = Math.max(character.flags.ffs[name][key].fontSize+delta*2, 2)
-			let top = (character.flags.ffs[name][key].y+delta*-1)
+			let delta = e.originalEvent.wheelDelta>0?-2:2;
+			let fontSize = Math.max(character.flags.ffs[name][key].fontSize+delta, 2)
+			let top = (character.flags.ffs[name][key].y-delta)
 			$(this).css({fontSize: fontSize +"px", top: top+'px'})
 			await character.setFlag('ffs', [`${name}.${key}`], {fontSize: fontSize, y: top});
 		})
@@ -108,11 +107,13 @@ Actor.prototype.freeformSheet = async function(name) {
 		.contextmenu(function(e){
 			e.stopPropagation();
 			e.preventDefault();
+			if ($(this).parent().hasClass('locked')) return;
 			let text = character.flags.ffs[name][key].text
-			if (e.ctrlKey || text.includes('@UUID')) {
+			if ((e.ctrlKey || text.includes('@')) && !e.shiftKey) {
 				new Dialog({
 					title: key,
-					content: `<input type="text" value="${text}"></input>`,
+					content: `<input type="text" value="${text}" style="width: calc(100% - 2.2em); margin-bottom:.5em;"></input>
+					<button class="at" style="width: 2em; height: 26px; float: right; line-height: 22px;">@</button>`,
 					buttons: {confirm: {label:"Confirm", icon: '<i class="fas fa-check"></i>', callback: async (html)=>{
 						confirm = true;
 						let input = html.find('input').val();
@@ -121,13 +122,70 @@ Actor.prototype.freeformSheet = async function(name) {
 							await character.unsetFlag('ffs', `${name}.${key}`);
 							return $(this).remove();
 						}
-						$(this).html(TextEditor.enrichHTML(Roll.replaceFormulaData(input, {...character.toObject(), ...character.getRollData()})))
+						$(this).html(TextEditor.enrichHTML(Roll.replaceFormulaData(input, {...{name: character.name}, ...character.getRollData()})))
 						await character.setFlag('ffs', [`${name}.${key}`], {text: input});
 					}},
 					cancel: {label:"Cancel", icon: '<i class="fas fa-times"></i>',callback: async (html)=>{}}},
 					default: 'confirm',
-					close: ()=>{return}
-				}).render(true)
+					render: (html)=>{
+						//$(html).parent().parent().find('.window-title')//.wrap( `<a></a>` )
+						html.parent().parent() // the app
+						.mouseenter(function(){$(`#${key}`).css({'text-shadow': '0 0 8px green'})})
+						.mouseleave(function(){$(`#${key}`).css({'text-shadow': ''})})
+						
+						function buildObjectElements(el, objectPath) {
+							let property = getProperty(character, objectPath)
+							if (property===null) return;
+							for (let key of Object.keys(property)) {
+								let prop = foundry.utils.getProperty(character, `${objectPath}.${key}`)
+								if (typeof(prop) === 'object') {
+									let objectel = $(`
+									<div class="object-path" data-path="${objectPath}.${key}" style="${objectPath=="system"?'':'margin-left: 1em;'}">
+										<a>${key} +</a>
+									</div>`)
+									el.append(objectel)
+									buildObjectElements(objectel, `${objectPath}.${key}`)
+								}
+								else
+									el.append($(
+									`<div class="value-path" data-path="${objectPath}.${key}" title="@${(objectPath+'.'+key).replace('system.','')}" style="${objectPath=="system"?'':'margin-left: 1em;'}">
+										<a>${key} : ${typeof(prop)=="string"?`"${prop}"`:prop}</a>
+									</div>`));
+							}
+							return el;
+						}
+						html.find('button.at').click(function(e){
+							$('body').find('.object-path-root').remove();
+							let $atOptions = $(`<div class="object-path-root" data-path="system" 
+							style="z-index: 1000; width: max-content; height: max-content; color: white; border: 1px solid black; box-shadow: 0 0 20px var(--color-shadow-dark);
+							background: url(../ui/denim075.png) repeat; border-radius: 5px; padding: .5em; padding-left: -10px;
+							position: absolute; left:${e.clientX-10}px; top:${e.clientY}px;">
+							<a></a></div>`)
+							.mouseenter(function(e){
+								$(this).removeClass('hide');
+							})
+							.mouseleave(async function(e){
+								$(this).addClass('hide');
+								await new Promise((r) => setTimeout(r, 750));
+								if ($(this).hasClass('hide'))
+									$(this).remove();
+							})
+							
+							buildObjectElements($atOptions, 'system')
+							$atOptions.find(`.object-path, .value-path`).hide()
+    					$atOptions.children(`.object-path, .value-path`).show()
+							$atOptions.find(`a`).click(function(){
+								$(this).parent().children('div').toggle()
+							})
+							$atOptions.find(`.value-path > a`).click(function(){
+								html.find('input').val('@'+$(this).parent().data().path.replace('system.',''))
+							})
+							$('body').append($atOptions)
+
+						})
+					},
+					close: ()=>{return $('body').find('.object-path-root').remove();}
+				},{...$(this).offset(), id: `${id}-${key}-dialog`}).render(true)
 
 				return;
 			}
@@ -144,8 +202,8 @@ Actor.prototype.freeformSheet = async function(name) {
 		content: `<div class="ffs"></div>`,
 		buttons: {},
 		render: async (html)=>{
-			//console.log(`${id} render`)
-			let {width, height, left, top, background, color , scale , fontFamily, fontWeight, filter} = ffs[id];
+			console.log(`${id} render`)
+			let {width, height, left, top, background, color , scale , fontFamily, fontWeight, filter, locked} = ffs[id];
 
 			// apply configs
 			html.css({height: 'max-content !important'});
@@ -153,6 +211,8 @@ Actor.prototype.freeformSheet = async function(name) {
 
 			$sheet.before($(`<style>
 				#${id} > section.window-content > div.dialog-content > div.ffs {font-family: ${fontFamily}; font-weight: ${fontWeight}; cursor: cell; position: relative;}
+				#${id} > section.window-content > div.dialog-content > div.ffs.locked {cursor: default;}
+				#${id} > section.window-content > div.dialog-content > div.ffs.locked > span {cursor: default !important;}
         #${id} > section.window-content > div.dialog-content > div.ffs * {border: unset !important; padding: 0; background: unset; background-color: unset; color: ${color} !important;} 
         #${id} > section.window-content > div.dialog-content > div.ffs > span > input:focus {box-shadow: unset; } 
 				#${id} > section.window-content > div.dialog-content > div.ffs > span:focus-visible {outline-color:white; outline:unset; /*outline-style: outset; outline-offset: 6px;*/}
@@ -173,6 +233,9 @@ Actor.prototype.freeformSheet = async function(name) {
 				'height': `${height}px`,'width': `${width}px`
 			});
 
+			if (locked) $sheet.addClass('locked')
+			else $sheet.removeClass('locked')
+
 			// make spans
 			for (const [key, value] of Object.entries(character.flags.ffs[name])) 
 				if (key=='config') continue;
@@ -181,6 +244,7 @@ Actor.prototype.freeformSheet = async function(name) {
 			// apply sheet events for creating new spans
 			
 			$sheet.contextmenu(async function(e){
+				if (locked) return;
 				if (e.originalEvent.target.nodeName != "DIV") return;
 				let id = randomID();
 				let value = {x: e.offsetX, y: e.offsetY-8, text: "NEW TEXT", fontSize: 16};
@@ -190,6 +254,7 @@ Actor.prototype.freeformSheet = async function(name) {
 				$span.contextmenu();
 			})
 			.bind('drop', async function(e){
+				if (locked) return;
 				e.originalEvent.preventDefault();
 				let data = JSON.parse(e.originalEvent.dataTransfer.getData("Text"));
 				let text = fromUuidSync(data.uuid).link
@@ -199,9 +264,14 @@ Actor.prototype.freeformSheet = async function(name) {
 				let $span = await newSpan(id, value);
 				$(this).append($span);
 			});
+
+			if (locked) html.find(`.ffs > span`).draggable('disable')
 		},
 		close: async (html)=>{
 				if (ffs[id].hook) Hooks.off('', ffs[id].hook);
+				$(`div[id^="${id}-"]`).each(function(){
+					ui.windows[$(this).data().appid].close();
+				})
 				//delete ffs[id];
 				//delete character.apps[d.appId];
 				return;
@@ -224,21 +294,27 @@ Actor.prototype.freeformSheet = async function(name) {
 		new Dialog({
 			title: `Freeform Sheet Help`,
 			content: `<center>
-			<p>Click somewhere with the text cursor to spawn a NEW TEXT.</p>
+			<p>Right-Click somewhere with the <b>+</b> cursor to spawn a NEW TEXT.</p>
+			<p>Right-Click existing text elements while the text cursor is showing to edit the text.</p>
 			<p>Changes to the text will be saved on focus loss or pressing Enter. If there is no text entered or the value is still "NEW TEXT" the element will be removed.</p>
+			<p>Fields with an <b>@</b> will open a dialog because these texts can be rather long and do not show when rendered on the sheet.</p>
+			<p>You can force the dialog to open for a field by holding Ctrl when you Right-Click</p>
 			<p>Click and drag saved text elements to reposition</p>
 			<p>When hovering an element, the scroll wheel can be used to adjust the size of the text.</p>
 			<p>Entities can be dragged from the sidebar. Macros can be dragged from the hotbar or macro directory. These will create clickable links to content on the sheet.</p>
-			<p>The cog wheel in the header will show the font config. More fonts may be added in Foundry's core settings under <b>Additional Fonts</b>.</p>
+			<p>The <i class="fa-solid fa-font"></i> icon in the header will show the font config. More fonts may be added by the GM in Foundry's core settings under <b>Additional Fonts</b>.</p>
+			<p>The <i class="fa-solid fa-eye"></i> icon in the header will show the sheet filter config.</p>
+			<p>The <i class="fa-solid fa-lock"></i> icon in the header will toggle dragging.</p>
 			</center>`,
 			buttons: {},
 			render: (html)=>{ 
 			},
 			close:(html)=>{ return }
-		},{width: 550}).render(true);
-	}));
+		},{width: 550, id: `${id}-help-dialog`}).render(true);
+	}).dblclick(function(e){e.stopPropagation();}));
 
 	$header.find('h4.window-title').after($(`<a><i class="fa-solid fa-font"></i></a>`).click(function(e){
+		if ($(`#${id}-font-dialog`).length) return ui.windows[$(`div#${id}-font-dialog`).data().appid].bringToTop();
 		new Dialog({
 			title: `Font Configuration`,
 			content: `
@@ -260,8 +336,8 @@ Actor.prototype.freeformSheet = async function(name) {
 				$fontFamily.css('font-family', $fontFamily.val());
 				$fontWeight.css('font-weight', $fontWeight.val());
 				$fontWeight.css('font-family', $fontFamily.val());
-				$fontColor.prevAll().css({'color': ffs[id].color})
-
+				//$fontColor.prevAll().css({'color': ffs[id].color})
+				
 				$fontFamily.change(async function(){
 					let fontFamily =  $(this).val();
 					ffs[id].fontFamily = fontFamily;
@@ -283,16 +359,17 @@ Actor.prototype.freeformSheet = async function(name) {
 				$fontColor.change(async function(){
 					let color = $(this).val();
 					ffs[id].color = color;
-					$(this).prevAll().css({color});
+					//$(this).prevAll().css({color});
 					await character.setFlag('ffs', name, {config: {color}})
 					d.render(true);
 				});
 			},
 			close:(html)=>{ return }
-		},{...$(this).offset(), width: 150}).render(true);
-	}));
+		},{...$(this).offset(), width: 150, id: `${id}-font-dialog`}).render(true);
+	}).dblclick(function(e){e.stopPropagation();}));
 
 	$header.find('h4.window-title').after($(`<a title="Sheet Filters" ><i class="fa-solid fa-eye"></i></a>`).click( async function(e){
+		if ($(`#${id}-filter-dialog`).length) return ui.windows[$(`div#${id}-filter-dialog`).data().appid].bringToTop();
 		e.stopPropagation();
 		let confirm = false;
 		let values = character.flags.ffs[name].config.filter.split('%').map(f=>f.split('(')).map((f,i)=>!i?f:[f[0].split(' ')[1], f[1]]).reduce((a,f)=>{ return {...a, [f[0]]: f[1]}; },{})
@@ -329,8 +406,8 @@ Actor.prototype.freeformSheet = async function(name) {
 					else
 						$(`#${id}`).find('.ffs').css({filter: 'unset'});
 				return }
-		},{...$(this).offset()}).render(true);
-	}));
+		},{...$(this).offset(), id: `${id}-filter-dialog`}).render(true);
+	}).dblclick(function(e){e.stopPropagation();}));
 
 	$header.find('h4.window-title').after($(`<a title="Zoom In" ><i class="fas fa-plus"></i></a>`).click( async function(e){
 		e.stopPropagation();
@@ -339,18 +416,18 @@ Actor.prototype.freeformSheet = async function(name) {
 		scale = Math.round(scale*10)/10;
 		ffs[id].scale = scale;
 		$header.find('a.zoom > b').text(Math.round(scale*100)+'%')
-		await character.setFlag('ffs', 'config.scale', scale);
+		await character.setFlag('ffs', name, {config: {scale}})
 		d.render(true, { width: width*scale+16, height: height*scale+46});
-	}));
+	}).dblclick(function(e){e.stopPropagation();}));
 
 	$header.find('h4.window-title').after($(`<a class="zoom" title="Reset Scale"><b>${Math.round(ffs[id].scale*100)}%</b></a>`).click( async function(e) {
 		let {scale, width, height} = ffs[id];
 		scale = 1;
 		ffs[id].scale = 1;
 		$header.find('a.zoom > b').text(Math.round(scale*100)+'%')
-		await character.setFlag('ffs', 'config.scale', scale);
+		await character.setFlag('ffs', name, {config: {scale}})
 		d.render(true, { width: width+16, height: height+46});
-	}));
+	}).dblclick(function(e){e.stopPropagation();}));
 
 	$header.find('h4.window-title').after($(`<a title="Zoom Out" ><i class="fas fa-minus"></i></a>`).click( async function(e){
 		e.stopPropagation();
@@ -359,9 +436,27 @@ Actor.prototype.freeformSheet = async function(name) {
 		scale = Math.round(scale*10)/10;
 		ffs[id].scale = scale;
 		$header.find('a.zoom > b').text(Math.round(scale*100)+'%')
-		await character.setFlag('ffs', 'config.scale', scale);
+		await character.setFlag('ffs', name, {config: {scale}})
 		d.render(true, { width: width*scale+16, height: height*scale+46});
-	}));
+	}).dblclick(function(e){e.stopPropagation();}));
+
+	$header.find('h4.window-title').after($(`<a title="Drag Lock" ><i class="fas fa-lock${ffs[id].locked?'':'-open'}"></i></a>`).click( async function(e){
+		let locked = !ffs[id].locked;
+		if (!locked) {
+			//$(`#${id}`).find(`.ffs > span`).draggable('enable')
+			$(this).find('i').removeClass('fa-lock').addClass('fa-lock-open')
+			$(`#${id}`).find(`.ffs`).removeClass('locked')
+		}
+		else {
+			//$(`#${id}`).find(`.ffs > span`).draggable('disable')
+			$(this).find('i').removeClass('fa-lock-open').addClass('fa-lock')
+			$(`#${id}`).find(`.ffs`).addClass('locked')
+		}
+		ffs[id].locked = locked;
+		await character.setFlag('ffs', name, {config: {locked}})
+		d.render(true);
+		
+	}).dblclick(function(e){e.stopPropagation();}));
 
 	// I do not use the document.apps because it causes renders on every flag change I do. This way, I can ignore reloads on all ffs updates
 	// character.apps[d.appId] = d;
@@ -379,7 +474,7 @@ Actor.prototype.freeformSheet = async function(name) {
 var ffs = {};
 
 ffs.configure = async function(name) {
-	
+	if ($(`#${name}-ffs-configuration`).length)  return ui.windows[$(`div#${name}-ffs-configuration`).data().appid].bringToTop();
 	let config = game.settings.get('ffs', 'sheets')[name];
 	if (!config) {
 			let sheets = {...game.settings.get('ffs', 'sheets'), ...{[name]: {}}}
@@ -389,9 +484,9 @@ ffs.configure = async function(name) {
 	let width = i.orig.width;
 	let height = i.orig.height;
 	let confirm = false;
-	let d = new Dialog({
+	let c = new Dialog({
 		title: name,
-		content: `<div class="ffs" style="position: relative; width: ${width}px; height:${height}px; margin: 20px;">
+		content: `<div class="ffs" style="position: relative; width: ${width}px; height:${height}px; margin: 10px;">
 			<img src="${config.background}" style="position: absolute;">
 			<div class="sizer ui-widget-content" style="background: unset; position: absolute; left: ${config.left}px; top:${config.top}px; width:${config.width}px; height: ${config.height}px; border: 2px dashed red;"></div>
 		</div>`,
@@ -414,7 +509,7 @@ ffs.configure = async function(name) {
 					config = {...config, ...ui.position}
 				}
 			})
-			d._element.find('h4.window-title').after($(`<a title="Change Image" ><i class="fa-solid fa-image"></i></a>`).click(async function(){
+			c._element.find('h4.window-title').after($(`<a title="Change Image" ><i class="fa-solid fa-image"></i></a>`).click(async function(){
 				return new FilePicker({
 					type: "image",
 					displayMode: 'tiles',
@@ -432,14 +527,14 @@ ffs.configure = async function(name) {
 							html.find('div.ffs').css({height, width});
 							html.find('div.sizer').css({height, width, left: 0, top: 0});
 							html.find('img').attr('src', path)
-							d.setPosition()
+							c.setPosition()
 						}
 					}).browse();
 			}));
 			
 		},
 		close: async (html)=>{ return false;}
-	}, {height: 'auto', width: 'auto'}).render(true);
+	}, {height: 'auto', width: 'auto', id: `${name}-ffs-configuration`}).render(true);
   //await game.macros.get(macroId).update({'flags.-=ffs':null})
 }
 
@@ -505,7 +600,7 @@ class ffsSettingsApp extends Dialog {
   }
 
   static getActiveApp() {
-    return Object.values(ui.windows).find(app => app.id === "ffs-sheets-module-settings");
+    return Object.values(ui.windows).find(app => app.id === "freeform-sheets-module-settings");
   }
   
   static async show(options = {}, dialogData = {}) {
@@ -561,13 +656,14 @@ Hooks.once("init", async () => {
 		default: {},         
 		onChange: value => { 
 			$('div[id^=ffs]').each(function(){
-				ui.windows[$(this).data().appid].close()
-		})
+				ui.windows[$(this).data().appid].close();
+			})
+			ui.sidebar.tabs.actors.render(true);
 		}
 	});
 });
 
-// add actor director context menu options for each sheet
+// add actor directory context menu options for each sheet
 
 Hooks.on('getActorDirectoryEntryContext', (app, options)=>{
 	for (let name of Object.keys(game.settings.get('ffs', 'sheets')))
@@ -588,8 +684,8 @@ Hooks.on('getActorDirectoryEntryContext', (app, options)=>{
 })
 
 
-// migration of macro configs
-Hooks.on('ready', ()=>{
+// migration of macro configs to settings
+Hooks.once('ready', ()=>{
 	if (Object.keys(game.settings.get('ffs', 'sheets')).length) return;
 	game.settings.set('ffs', 'sheets', game.macros.filter(m=>m.flags.ffs?.config).reduce((a,m)=> {
 		let config = m.flags.ffs?.config;
