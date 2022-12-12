@@ -38,5 +38,9 @@ Fonts can be added through the core font settings.
   - added lock button
   - added dialogs for changing @ fields because they could be long and hard to edit
   - @ dialogs have a button that shows and has selectable @ paths
+  
+1.4.0
+  - fixed issue of sheet rendering from the actor hook not taking resizing into account
+  - can now double click an @ field for a dialog to change it's value
 
 ![Freefrom Sheet Example](https://github.com/xaukael/ffs/blob/248ea21e6173638bd022dd68055fe5554ab6f847/ffs-example.jpg)
