@@ -324,6 +324,7 @@ Actor.prototype.freeformSheet = async function(name) {
       <p>Right-Click existing text elements while the text cursor is showing to edit the text.</p>
       <p>Changes to the text will be saved on focus loss or pressing Enter. If there is no text entered or the value is still "NEW TEXT" the element will be removed.</p>
       <p>Fields with an <b>@</b> will open a dialog because these texts can be rather long and do not show when rendered on the sheet.</p>
+      <p>Double Clicking an <b>@</b> field will open a dialog to edit it's value.</p>
       <p>You can force the dialog to open for a field by holding Ctrl when you Right-Click</p>
       <p>Click and drag saved text elements to reposition</p>
       <p>When hovering an element, the scroll wheel can be used to adjust the size of the text.</p>
