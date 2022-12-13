@@ -7,8 +7,8 @@
 Actor.prototype.freeformSheet = async function(name) {
   let character = this;
   name = name.slugify().replace(/[^a-zA-Z0-9\- ]/g, '');
-  let restirctedNames = ['config', 'template'];
-  if (restirctedNames.includes(name)) return console.error("restricted name", name);
+  
+  if (ffs.restirctedNames.includes(name)) return console.error("restricted name", name);
   //let macro = null;
   //macro = game.macros.get(macroId);
   //if (!macro) return console.error("macro not found. first parameter should be this.id");
@@ -112,6 +112,9 @@ Actor.prototype.freeformSheet = async function(name) {
       if ($(this).parent().hasClass('locked')) return;
       let text = character.getFlag('ffs', name)[key].text
       if ((e.ctrlKey || text.includes('@')) && !e.shiftKey) {
+        let options = $(this).offset();
+        options.left -= 190;
+        options.top -= 45;
         new Dialog({
           title: key,
           content: `<input type="text" value="${text}" style="width: calc(100% - 2.2em); margin-bottom:.5em;"></input>
@@ -190,7 +193,7 @@ Actor.prototype.freeformSheet = async function(name) {
             $(`#${key}`).css({'text-shadow': ''})
             return $('body').find('.object-path-root').remove();
           }
-        },{...$(this).offset(), id: `${id}-${key}-dialog`}).render(true)
+        },{...options, id: `${id}-${key}-dialog`}).render(true)
 
         return;
       }
@@ -204,8 +207,13 @@ Actor.prototype.freeformSheet = async function(name) {
       if (text.at(0)!='@') return;
       text = text.replace('@', '');
       if (!foundry.utils.hasProperty(game.system.model.Actor[character.type], text)) return;
-      let val = foundry.utils.getProperty(character.system, text);
+      let val;
+      if (game.release?.generation >= 10) val = foundry.utils.getProperty(character.system, text);
+      else val = foundry.utils.getProperty(character.data.data, text);
       if (typeof(val)=='object') return;
+      let options = $(this).offset();
+      options.left -= 190;
+      options.top -= 45;
       new Dialog({
         title: `Edit ${text}`,
         content: `<input type="${typeof(val)}" value="${val}" style="width: 100%; margin-bottom:.5em; text-align: center;" autofocus></input>`,
@@ -221,7 +229,7 @@ Actor.prototype.freeformSheet = async function(name) {
         },
         close: ()=>{ return
         }
-      },{...$(this).offset(), id: `${id}-${key}-dialog`}).render(true)
+      },{...options, id: `${id}-${key}-value-dialog`}).render(true)
 
     })
     return $span;
@@ -268,7 +276,7 @@ Actor.prototype.freeformSheet = async function(name) {
 
       // make spans
       for (const [key, value] of Object.entries(character.getFlag('ffs', name))) 
-        if (restirctedNames.includes(key)) continue;
+        if (ffs.restirctedNames.includes(key)) continue;
         else $sheet.append(await newSpan(key, value));
       
       // apply sheet events for creating new spans
@@ -300,7 +308,7 @@ Actor.prototype.freeformSheet = async function(name) {
       if (locked) html.find(`.ffs > span`).draggable('disable')
     },
     close: async (html)=>{
-        if (ffs[id].hook) Hooks.off('', ffs[id].hook);
+        if (ffs[id].hook) Hooks.off(`update${this.documentName}`, ffs[id].hook);
         $(`div[id^="${id}-"]`).each(function(){
           ui.windows[$(this).data().appid].close();
         })
@@ -310,6 +318,18 @@ Actor.prototype.freeformSheet = async function(name) {
       }
   }, options
   ).render(true);
+
+   // I do not use the document.apps because it causes renders on every flag change I do. This way, I can ignore reloads on all ffs updates
+  // character.apps[d.appId] = d;
+  
+  if (ffs[id].hook) Hooks.off(`update${this.documentName}`, ffs[id].hook)
+  ffs[id].hook = 
+    Hooks.on(`update${this.documentName}`, (doc, updates)=>{
+      if (doc.id!=character.id) return;
+      if (!d.element) return;
+      if (foundry.utils.hasProperty(updates, "flags.ffs")) return true;
+      d.render(true, { width: ffs[id].width*ffs[id].scale+16, height: ffs[id].height*ffs[id].scale+46});
+    })
 
   let waitRender = 100;
   // wait for the element
@@ -494,21 +514,14 @@ Actor.prototype.freeformSheet = async function(name) {
     
   }).dblclick(function(e){e.stopPropagation();}));
 
-  // I do not use the document.apps because it causes renders on every flag change I do. This way, I can ignore reloads on all ffs updates
-  // character.apps[d.appId] = d;
-  
-  if (ffs[id].hook) Hooks.off('', ffs[id].hook)
-  ffs[id].hook = 
-    Hooks.on(`update${this.documentName}`, (doc, updates)=>{
-      if (doc.id!=character.id) return;
-      if (!d) return;
-      if (foundry.utils.hasProperty(updates, "flags.ffs")) return true;
-      d.render(true, { width: ffs[id].width*ffs[id].scale+16, height: ffs[id].height*ffs[id].scale+46});
-    })
+ 
 }
 
 var ffs = {};
 
+ffs.restirctedNames = ['config', 'template'];
+
+// clone a sheet of name(string) from source(actor) to target(actor)
 ffs.clone = async function(name, source, target) {
   let sheet = game.settings.get('ffs', 'sheets')[name];
   if (!sheet) return console.error(`sheet config for ${name} not found in game settings`);;
@@ -519,6 +532,10 @@ ffs.clone = async function(name, source, target) {
   return target.freeformSheet(name);
 }
 
+// full reset of a sheet of name for an actor
+ffs.resetActorSheet = async function(actor, name) {
+  await actor.unsetFlag('ffs', name)
+}
 
 ffs.configure = async function(name) {
   if ($(`#${name}-ffs-configuration`).length)  return ui.windows[$(`div#${name}-ffs-configuration`).data().appid].bringToTop();
@@ -595,7 +612,7 @@ class ffsSettingsApp extends Dialog {
     render: (html)=>{
       let d = this;
       html.find('.sheets').append($(Object.entries(game.settings.get('ffs', 'sheets')).reduce((a, [name, config])=> {
-        return a+=`<div><h3>${name}<a class="delete" name="${name}" style="float:right"><i class="fas fa-times"></i></a></h3>
+        return a+=`<div style="margin-bottom:.5em;"><h2>${name}<a class="delete" name="${name}" style="float:right"><i class="fas fa-times"></i></a></h2>
         <a class="configure" name="${name}" ><img src="${config.background}" height=300></a><br>
         <button class="template" name="${name}" style="width: 200px">${game.actors.find(a=>a.getFlag('ffs', name)?.template)?'Edit':'Create'} Template Actor</button>
         </div>
@@ -618,8 +635,7 @@ class ffsSettingsApp extends Dialog {
         },{width:100});
         name = name.slugify().replace(/[^a-zA-Z0-9\- ]/g, '');
         if (!name) return ui.notifications.warn('Sheets must have a name.');
-        let restirctedNames = ['config', 'template'];
-        if (restirctedNames.includes(name)) return console.error("restricted name", name);
+        if (ffs.restirctedNames.includes(name)) return console.error("restricted name", name);
         if (Object.keys(game.settings.get('ffs', 'sheets')).includes(name)) return ui.notifications.warn('That sheet name is already in use.');
         new FilePicker({
           type: "image",
@@ -640,10 +656,10 @@ class ffsSettingsApp extends Dialog {
         if (templateActor) {
           templateActor.freeformSheet(this.name);
         } else {
-          templateActor = await Actor.createDialog();
-          await templateActor.setFlag('ffs', this.name, {template:true})
           let folder = game.folders.find(f=>f.getFlag('ffs', 'template'));
           if (!folder) folder = await Folder.create({type:'Actor', name: 'Freeform Sheet Templates', flags: {ffs: {template: true}}})
+          templateActor = await Actor.createDialog({name: `${this.name} template`, img: $(this).parent().find('img').attr('src')});
+          await templateActor.setFlag('ffs', this.name, {template:true})
           await templateActor.update({folder: folder.id})
           templateActor.freeformSheet(this.name);
           $(this).text('Edit Template Actor');
@@ -696,11 +712,6 @@ class SettingsShim extends FormApplication {
     this.close();
   }
   
-}
-
-// full reset of a sheet for an actor
-ffs.resetActorSheet = async function(actorId, name) {
-  await game.actors.get(actorId).unsetFlag('ffs', name)
 }
 
 Hooks.once("init", async () => {
