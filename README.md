@@ -57,5 +57,9 @@ Fonts can be added through the core font settings.
   - template actors get sheet images as actor img
   - field dialogs open with text more or less centered at the cursor
   - missing roll data values are back to just @ field now because it broke content links
+  
+1.7.0
+  - added option for forcing players to see a default sheet instead of the system's sheet
+  - added buttons to the freeform sheet header and actor sheet header to view sheet options
 
 ![Freefrom Sheet Example](https://github.com/xaukael/ffs/blob/248ea21e6173638bd022dd68055fe5554ab6f847/ffs-example.jpg)
