@@ -49,5 +49,13 @@ Fonts can be added through the core font settings.
   
 1.6.0
   - v9 compatibility
+  
+1.6.1
+  - fixes for v9 compatibility mess
+  - Hooks properly removed so sheets do not re-open on actor updates
+  - @ field value updates work now
+  - template actors get sheet images as actor img
+  - field dialogs open with text more or less centered at the cursor
+  - missing roll data values are back to just @ field now because it broke content links
 
 ![Freefrom Sheet Example](https://github.com/xaukael/ffs/blob/248ea21e6173638bd022dd68055fe5554ab6f847/ffs-example.jpg)
