@@ -7,7 +7,8 @@
 Actor.prototype.freeformSheet = async function(name) {
   let character = this;
   name = name.slugify().replace(/[^a-zA-Z0-9\- ]/g, '');
-  if (name == "config") return console.error("restricted name", name);
+  let restirctedNames = ['config', 'template'];
+  if (restirctedNames.includes(name)) return console.error("restricted name", name);
   //let macro = null;
   //macro = game.macros.get(macroId);
   //if (!macro) return console.error("macro not found. first parameter should be this.id");
@@ -25,14 +26,14 @@ Actor.prototype.freeformSheet = async function(name) {
   
   // perform cleanup of empty and NEW TEXT. Should not be necessary
   let toDelete = Object.entries(character.flags.ffs[name] ?? {}).reduce((acc, [a,{text}]) => {
-    if (a == 'config') return acc;
+    if (restirctedNames.includes(a)) return acc;
     if (text.trim()=="" || text.trim() === "NEW TEXT") acc[`flags.ffs.${name}.-=${a}`] = null;
     return acc;
   }, {});
   await character.update(toDelete);
 
   ffs[id] = {...character.flags.ffs[name].config, ...sheet};
-  console.log(name, ffs[id])
+  //console.log(name, ffs[id])
   let options = {width: 'auto', height: 'auto', id}
   if (ffs[id].width && ffs[id].height)
     options = {...options,...{width: ffs[id].width*ffs[id].scale+16, height: ffs[id].height*ffs[id].scale+46}};
@@ -43,7 +44,7 @@ Actor.prototype.freeformSheet = async function(name) {
   
   let newSpan = async function(key, value){
     let $span = $(`<span id="${key}" style="cursor: text;">
-      ${TextEditor.enrichHTML(Roll.replaceFormulaData(value.text, {...character.getRollData(), name: character.name}))}
+      ${TextEditor.enrichHTML(Roll.replaceFormulaData(value.text, {...character.getRollData(), name: character.name}, {missing:"-"}))}
     <span>`);
     $span.css({position:'absolute', left: value.x+'px', top: value.y+'px', color: 'black', fontSize: value.fontSize})
     let click = {x: 0, y: 0};
@@ -52,11 +53,11 @@ Actor.prototype.freeformSheet = async function(name) {
       $(this).find('span').remove();
       let input = $(this).html().trim();
       if (input == "" || input == "NEW TEXT") {
-        console.log(`removing span`, name, key)
+        //console.log(`removing span`, name, key)
         await character.unsetFlag('ffs', `${name}.${key}`);
         return $(this).remove();
       }
-      $(this).html(TextEditor.enrichHTML(Roll.replaceFormulaData(input,{...character.getRollData(), name: character.name})))
+      $(this).html(TextEditor.enrichHTML(Roll.replaceFormulaData(input,{...character.getRollData(), name: character.name}, {missing:"-"})))
       await character.setFlag('ffs', [`${name}.${key}`], {text: input});
       $(this).draggable('enable')
       $(this).prop('role',"")
@@ -122,14 +123,14 @@ Actor.prototype.freeformSheet = async function(name) {
               await character.unsetFlag('ffs', `${name}.${key}`);
               return $(this).remove();
             }
-            $(this).html(TextEditor.enrichHTML(Roll.replaceFormulaData(input, {...{name: character.name}, ...character.getRollData()})))
+            $(this).html(TextEditor.enrichHTML(Roll.replaceFormulaData(input, {...{name: character.name}, ...character.getRollData()}, {missing:"-"})))
             await character.setFlag('ffs', [`${name}.${key}`], {text: input});
           }},
           cancel: {label:"Cancel", icon: '<i class="fas fa-times"></i>',callback: async (html)=>{}}},
           default: 'confirm',
           render: (html)=>{
-            //$(html).parent().parent().find('.window-title')//.wrap( `<a></a>` )
-            html.parent().parent() // the app
+            
+            html.parent().parent() 
             .mouseenter(function(){$(`#${key}`).css({'text-shadow': '0 0 8px green'})})
             .mouseleave(function(){$(`#${key}`).css({'text-shadow': ''})})
             
@@ -181,7 +182,7 @@ Actor.prototype.freeformSheet = async function(name) {
                 html.find('input').val('@'+$(this).parent().data().path.replace('system.',''))
               })
               $('body').append($atOptions)
-
+              html.find('input').focus().select();
             })
           },
           close: ()=>{
@@ -198,7 +199,9 @@ Actor.prototype.freeformSheet = async function(name) {
       $(this).focus()
     })
     .dblclick(function(e){
-      let text = character.flags.ffs[name][key].text.replace('@', '');
+      let text = character.flags.ffs[name][key].text;
+      if (text.at(0)!='@') return;
+      text = text.replace('@', '');
       if (!foundry.utils.hasProperty(game.system.model.Actor[character.type], text)) return;
       let val = foundry.utils.getProperty(character.system, text);
       if (typeof(val)=='object') return;
@@ -213,7 +216,7 @@ Actor.prototype.freeformSheet = async function(name) {
         }}},
         default: 'confirm',
         render: (html) =>{
-          html.find('input').focus().select()
+          html.find('input').focus().select();
         },
         close: ()=>{ return
         }
@@ -228,7 +231,7 @@ Actor.prototype.freeformSheet = async function(name) {
     content: `<div class="ffs"></div>`,
     buttons: {},
     render: async (html)=>{
-      console.log(`${id} render`)
+      //console.log(`${id} render`)
       let {width, height, left, top, background, color , scale , fontFamily, fontWeight, filter, locked} = ffs[id];
 
       // apply configs
@@ -264,7 +267,7 @@ Actor.prototype.freeformSheet = async function(name) {
 
       // make spans
       for (const [key, value] of Object.entries(character.flags.ffs[name])) 
-        if (key=='config') continue;
+        if (restirctedNames.includes(key)) continue;
         else $sheet.append(await newSpan(key, value));
       
       // apply sheet events for creating new spans
@@ -273,7 +276,7 @@ Actor.prototype.freeformSheet = async function(name) {
         if (locked) return;
         if (e.originalEvent.target.nodeName != "DIV") return;
         let id = randomID();
-        let value = {x: e.offsetX, y: e.offsetY-8, text: "NEW TEXT", fontSize: 16};
+        let value = {x: e.offsetX, y: e.offsetY-8, text: e.ctrlKey?"@":"NEW TEXT", fontSize: 16};
         await character.setFlag('ffs', [`${name}`], {[`${id}`]: value});
         let $span = await newSpan(id, value);
         $(this).append($span);
@@ -500,6 +503,17 @@ Actor.prototype.freeformSheet = async function(name) {
 
 var ffs = {};
 
+ffs.clone = async function(name, source, target) {
+  let sheet = game.settings.get('ffs', 'sheets')[name];
+  if (!sheet) return console.error(`sheet config for ${name} not found in game settings`);;
+  if (!source || !target) return console.error('source or target actor not defined');
+  let flag = foundry.utils.deepClone(await source.getFlag('ffs', name));
+  delete flag.template;
+  await target.setFlag('ffs', name, flag )
+  return target.freeformSheet(name);
+}
+
+
 ffs.configure = async function(name) {
   if ($(`#${name}-ffs-configuration`).length)  return ui.windows[$(`div#${name}-ffs-configuration`).data().appid].bringToTop();
   let config = game.settings.get('ffs', 'sheets')[name];
@@ -576,7 +590,10 @@ class ffsSettingsApp extends Dialog {
       let d = this;
       html.find('.sheets').append($(Object.entries(game.settings.get('ffs', 'sheets')).reduce((a, [name, config])=> {
         return a+=`<div><h3>${name}<a class="delete" name="${name}" style="float:right"><i class="fas fa-times"></i></a></h3>
-        <a class="configure" name="${name}" ><img src="${config.background}" height=300></a></div>`}	,``)));
+        <a class="configure" name="${name}" ><img src="${config.background}" height=300></a><br>
+        <button class="template" name="${name}" style="width: 200px">${game.actors.find(a=>a.flags.ffs?.[name]?.template)?'Edit':'Create'} Template Actor</button>
+        </div>
+        `}	,``)));
       d.setPosition({height: 'auto'});
       html.find('a.configure').click(function(){ffs.configure(this.name);});
       html.find('a.delete').click(async function(){
@@ -595,6 +612,8 @@ class ffsSettingsApp extends Dialog {
         },{width:100});
         name = name.slugify().replace(/[^a-zA-Z0-9\- ]/g, '');
         if (!name) return ui.notifications.warn('Sheets must have a name.');
+        let restirctedNames = ['config', 'template'];
+        if (restirctedNames.includes(name)) return console.error("restricted name", name);
         if (Object.keys(game.settings.get('ffs', 'sheets')).includes(name)) return ui.notifications.warn('That sheet name is already in use.');
         new FilePicker({
           type: "image",
@@ -610,6 +629,20 @@ class ffsSettingsApp extends Dialog {
         }).render(true);
         
       })
+      html.find('button.template').click(async function(){
+        let templateActor = game.actors.find(a=>a.flags.ffs?.[this.name]?.template)
+        if (templateActor) {
+          templateActor.freeformSheet(this.name);
+        } else {
+          templateActor = await Actor.createDialog();
+          await templateActor.setFlag('ffs', this.name, {template:true})
+          let folder = game.folders.find(f=>f.flags.ffs);
+          if (!folder) folder = await Folder.create({type:'Actor', name: 'Freeform Sheet Templates', flags: {ffs: 'template'}})
+          await templateActor.update({folder: folder.id})
+          templateActor.freeformSheet(this.name);
+          $(this).text('Edit Template Actor');
+        }
+      });
     },
     buttons: {
       //confirm: {label:"Confirm", icon: '<i class="fas fa-check"></i>', callback: async (html)=>{return}},
@@ -693,7 +726,8 @@ Hooks.once("init", async () => {
 // add actor directory context menu options for each sheet
 
 Hooks.on('getActorDirectoryEntryContext', (app, options)=>{
-  for (let name of Object.keys(game.settings.get('ffs', 'sheets')))
+  for (let name of Object.keys(game.settings.get('ffs', 'sheets'))) {
+    let templateActor = game.actors.find(a=>a.flags.ffs?.[name]?.template);
     options.push(
       {
         "name": `${name.capitalize()} Freeform Sheet`,
@@ -707,7 +741,36 @@ Hooks.on('getActorDirectoryEntryContext', (app, options)=>{
           actor.freeformSheet(name);
         }
       }
-    )
+    );
+    if (templateActor && game.user.isGM) {
+      options.push(
+        {
+          "name": `Apply ${name.capitalize()} Template`,
+          "icon": `<i class="fa-solid fa-download"></i>`,
+          "element": {},
+          condition: li => {
+            return templateActor.id != li.data("documentId")
+          },
+          callback: async li => {
+            const actor = game.actors.get(li.data("documentId"));
+            let apply = await Dialog.wait({
+              title: `Confirm Apply Template`,
+              content: `<center><p> This will apply all fields and configuration from ${templateActor.name} to actor ${actor.name}</p><center>`,
+              buttons: {
+                yes: {label: "Apply", "icon": `<i class="fa-solid fa-check"></i>`, callback:()=>{return true}},
+                no: {label: "Cancel",  "icon": `<i class="fa-solid fa-times"></i>`, callback:()=>{return false}}
+              },
+              close:()=>{return false}
+            });
+            if (!apply) return ui.notifications.info('Freeform Sheet template application aborted.');
+            await ffs.clone(name, templateActor, actor) ;
+            actor.freeformSheet(name);
+            return ui.notifications.info(`Freeform Sheet '${name}' template from '${templateActor.name}' applyed to actor '${actor.name}.'`);
+          }
+        }
+      );
+    }
+  }
 })
 
 
@@ -720,4 +783,5 @@ Hooks.once('ready', ()=>{
     return {...a, [m.command.match(/freeformSheet\((.*?)\)/)[0].match(/\'(.*?)\'/)[1]] : 
             m.flags.ffs.config}
     }	,{}))
+  ui.notifications.info('Macro Freeform Sheets moved to Freeform Sheet settings')
 })
