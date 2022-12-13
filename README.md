@@ -46,5 +46,8 @@ Fonts can be added through the core font settings.
 1.5.0
   - now with templating
   - fixed issues with @ fields that return null
+  
+1.6.0
+  - v9 compatibility
 
 ![Freefrom Sheet Example](https://github.com/xaukael/ffs/blob/248ea21e6173638bd022dd68055fe5554ab6f847/ffs-example.jpg)
