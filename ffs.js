@@ -33,16 +33,17 @@ Actor.prototype.freeformSheet = async function(name) {
   }, {});
   await character.update(toDelete);
 */
-  ffs[id] = {...character.getFlag('ffs',`${name}.config`), ...sheet};
+  ffs[id] = {...ffs[id], ...character.getFlag('ffs',`${name}.config`), ...sheet};
   //console.log(name, ffs[id])
   let options = {width: 'auto', height: 'auto', id}
   if (ffs[id].width && ffs[id].height)
-    options = {...options,...{width: ffs[id].width*ffs[id].scale+16, height: ffs[id].height*ffs[id].scale+46}};
+    options = {...options, ...{width: ffs[id].width*ffs[id].scale+16, height: ffs[id].height*ffs[id].scale+46}};
     if (!ffs[id].left) {
     let i = await loadTexture(ffs[id].background);
-    options = {...options,...{width: i.orig.width*ffs[id].scale+16, height: i.orig.height*ffs[id].scale+46}}
+    options = {...options, ...{width: i.orig.width*ffs[id].scale+16, height: i.orig.height*ffs[id].scale+46}}
   }
-  
+  if (ffs[id].position) options = {...options, ...ffs[id].position}
+
   let newSpan = async function(key, value){
     let $span = $(`<span id="${key}" style="cursor: text;">
       ${TextEditor.enrichHTML(Roll.replaceFormulaData(value.text, {...character.getRollData(), name: character.name}))}
@@ -335,12 +336,16 @@ Actor.prototype.freeformSheet = async function(name) {
   // wait for the element
   if (!d._element) 
     while (!d._element  && waitRender-- > 0) await new Promise((r) => setTimeout(r, 50));
+
+
   // set header buttons
   let $header  = d._element.find('header');
   if (game.user.isGM)
     $header.find('h4.window-title').after($(`<a><i class="fas fa-cog"></i></a>`).click(async function(){
       ffs.configure(name)
     }));
+  // to remember last position  
+  d._element.click(function(){ ffs[id].position = d._element.offset(); })
 
   $header.find('h4.window-title').after($(`<a><i class="fas fa-question-circle"></i></a>`).click(function(e){
     new Dialog({
@@ -514,12 +519,53 @@ Actor.prototype.freeformSheet = async function(name) {
     
   }).dblclick(function(e){e.stopPropagation();}));
 
- 
+  if (Object.keys(game.settings.get('ffs', 'sheets')).length>1)
+  $header.find('h4.window-title').after($(`<a title="Sheets" ><i class="fas fa-file-alt"></i></a>`).click( async function(e){
+    ffs.sheets(character, e);
+  }).dblclick(function(e){e.stopPropagation();}));
+
+  return d;
 }
 
 var ffs = {};
 
 ffs.restirctedNames = ['config', 'template'];
+
+ffs.sheets = async function(actor, e=null) {
+  let options = {id: 'freeform-sheets', width: 'auto'};
+  if ($(`#${options.id}`).length) return ui.windows[$(`#${options.id}`).data().appid].bringToTop();
+  if (e) options = {...options, ...{left: e.originalEvent.clientX, top: e.originalEvent.clientY}};
+  
+  let content = `<center>`;
+  for (let [name, config] of Object.entries(game.settings.get('ffs', 'sheets'))) {
+    let i = await loadTexture(config.background);
+    console.log(i.orig, config)
+    content +=`
+    <a class="sheet" name="${name}" title="${name}" style="width:${(config.width)/4}px; height:${(config.height)/4}px; overflow: hidden;
+    background: url(${config.background}) no-repeat; background-position: top -${config.top/4}px left -${config.left/4}px;
+    background-size: ${i.orig.width/4}px ${i.orig.height/4}px; margin: 0px 10px 10px 10px;">
+    </a>`;
+  }
+  content += `</center>`;
+  let s = new Dialog({
+    title: `Freeform Sheets`,
+    content,
+    render: (html)=>{
+      html.find('a.sheet').click(async function(){
+        await actor.freeformSheet(this.name);
+        s.bringToTop();
+      });
+    },
+    buttons: {},
+    close: async (html)=>{ return false;}
+  }, options).render(true);
+
+  let waitRender = 100;
+  // wait for the element
+  if (!$(`#${options.id}`).length) 
+    while (!$(`#${options.id}`).length && waitRender-- > 0) await new Promise((r) => setTimeout(r, 50));
+  ui.windows[$(`#${options.id}`).data().appid].setPosition({...options, height: 'auto'});
+}
 
 // clone a sheet of name(string) from source(actor) to target(actor)
 ffs.clone = async function(name, source, target) {
@@ -715,14 +761,6 @@ class SettingsShim extends FormApplication {
 }
 
 Hooks.once("init", async () => {
-  game.settings.registerMenu("ffs", "ffsConfigurationMenu", {
-    name: "Freeform Sheets Configuration",
-    label: "Configuration",      // The text label used in the button
-    hint: "Configuration for Freeform Sheets",
-    icon: "fas fa-bars",               // A Font Awesome icon used in the submenu button
-    type: SettingsShim,   // A FormApplication subclass which should be created
-    restricted: true                   // Restrict this submenu to gamemaster only?
-  });
 
   game.settings.register("ffs", "sheets", {
     name: "Freeform Sheets",
@@ -738,7 +776,60 @@ Hooks.once("init", async () => {
       ui.sidebar.tabs.actors.render(true);
     }
   });
+
+  game.settings.registerMenu("ffs", "ffsConfigurationMenu", {
+    name: "Freeform Sheets Configuration",
+    label: "Configuration",      
+    hint: "Configuration for Freeform Sheets",
+    icon: "fas fa-bars",               
+    type: SettingsShim,   
+    restricted: true                   
+  });
+
+  game.settings.register('ffs', 'overridePlayerCharacterSheet', {
+    name: `Override Player's Actor Sheets`,
+    hint: `Players will not be able to access the system character sheets.`,
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false,
+    config: true
+  });
+
+  game.settings.register('ffs', 'defaultSheet', {
+    name: `Default Sheet`,
+    hint: `Sheet to show when `,
+    scope: "world",
+    config: true,
+    type: String,
+    choices: Object.keys(game.settings.get('ffs', 'sheets')).reduce((a,k)=>{return a= {...a, [k]:k}},{default:""}),
+    default: "default",
+    config: true
+  });
+
 });
+
+Hooks.on('renderActorSheet', (app, html, data)=>{
+  if (!game.settings.get('ffs', 'overridePlayerCharacterSheet')) return;
+  if (game.user.isGM) return;
+  if (game.settings.get('ffs', 'defaultSheet')=="") return ui.notifications.warn('No default sheet selected.')
+  app.object.freeformSheet(game.settings.get('ffs', 'defaultSheet'))
+  html.css({display:'none'})
+  html.ready(function(){app.close()})
+  //game.macros.getName("Character Journal").execute()
+});
+
+Hooks.on('getActorSheetHeaderButtons', (app, buttons)=>{
+  if (Object.keys(game.settings.get('ffs', 'sheets')).length>1)
+  buttons.unshift({
+    "label": "Freeform Sheets",
+    "class": "ffs-sheets",
+    "icon": "fas fa-file-alt",
+    onclick: (e)=>{
+      ffs.sheets(app.object, e);
+    }
+  })
+})
 
 // add actor directory context menu options for each sheet
 
