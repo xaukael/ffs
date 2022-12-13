@@ -820,7 +820,7 @@ Hooks.on('renderActorSheet', (app, html, data)=>{
 });
 
 Hooks.on('getActorSheetHeaderButtons', (app, buttons)=>{
-  if (Object.keys(game.settings.get('ffs', 'sheets')).length>1)
+  if (Object.keys(game.settings.get('ffs', 'sheets')).length)
   buttons.unshift({
     "label": "Freeform Sheets",
     "class": "ffs-sheets",
