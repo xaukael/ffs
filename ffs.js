@@ -25,14 +25,12 @@ Actor.prototype.freeformSheet = async function(name) {
     await character.setFlag('ffs', [name], {config: {scale: 1, color: "#000000", filter: ''}});
   
   // perform cleanup of empty and NEW TEXT. Should not be necessary
-  /*
-  let toDelete = Object.entries(character.getFlag('ffs', name) ?? {}).reduce((acc, [a,{text}]) => {
-    if (restirctedNames.includes(a)) return acc;
-    if (text.trim()=="" || text.trim() === "NEW TEXT") acc[`flags.ffs.${name}.-=${a}`] = null;
-    return acc;
-  }, {});
-  await character.update(toDelete);
-*/
+  for (const [key, value] of Object.entries(character.getFlag('ffs', name))) {
+    if (ffs.restirctedNames.includes(key)) continue;
+    if (!value.text || $(`<span>${value.text}</span>`).text()=='') 
+      await character.unsetFlag('ffs', `${name}.${key}`)
+  }
+
   ffs[id] = {...ffs[id], ...character.getFlag('ffs',`${name}.config`), ...sheet};
   //console.log(name, ffs[id])
   let options = {width: 'auto', height: 'auto', id}
@@ -297,8 +295,9 @@ Actor.prototype.freeformSheet = async function(name) {
         e.originalEvent.preventDefault();
         let data = JSON.parse(e.originalEvent.dataTransfer.getData("Text"));
         let text = "@"
-        if (game.release?.generation >= 10) text = await fromUuid(data.uuid).link
+        if (game.release?.generation >= 10) text = fromUuidSync(data.uuid).link
         else text = CONFIG[data.type].collection.instance.get(data.id).link
+        console.log(text)
         let id = randomID();
         let value = {x: e.offsetX, y: e.offsetY-8, text, fontSize: 16};
         await character.setFlag('ffs', [`${name}`], {[`${id}`]: value});
