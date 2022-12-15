@@ -65,5 +65,10 @@ Fonts can be added through the core font settings.
 1.7.1
   - fixed bug with entity dropping
   - added new cleanup of bad texts
+  
+1.7.2
+  - fixed bug where cancelling filter would unset all filters
+  - moved other sheets button to icon in front of header
+  - added option to hide content link icons, right click the 'A' where fonts are set. Will look for better place for that setting later
 
 ![Freefrom Sheet Example](https://github.com/xaukael/ffs/blob/248ea21e6173638bd022dd68055fe5554ab6f847/ffs-example.jpg)
