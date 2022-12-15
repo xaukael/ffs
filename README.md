@@ -61,5 +61,9 @@ Fonts can be added through the core font settings.
 1.7.0
   - added option for forcing players to see a default sheet instead of the system's sheet
   - added buttons to the freeform sheet header and actor sheet header to view sheet options
+  
+1.7.1
+  - fixed bug with entity dropping
+  - added new cleanup of bad texts
 
 ![Freefrom Sheet Example](https://github.com/xaukael/ffs/blob/248ea21e6173638bd022dd68055fe5554ab6f847/ffs-example.jpg)
