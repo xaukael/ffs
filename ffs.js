@@ -240,7 +240,7 @@ Actor.prototype.freeformSheet = async function(name) {
     buttons: {},
     render: async (html)=>{
       //console.log(`${id} render`)
-      let {width, height, left, top, background, color , scale , fontFamily, fontWeight, filter, locked} = ffs[id];
+      let {width, height, left, top, background, color , scale , fontFamily, fontWeight, filter, locked, hideContextIcons} = ffs[id];
 
       // apply configs
       html.css({height: 'max-content !important'});
@@ -255,10 +255,11 @@ Actor.prototype.freeformSheet = async function(name) {
         #${id} > section.window-content > div.dialog-content > div.ffs > span:focus-visible {outline-color:white; outline:unset; /*outline-style: outset; outline-offset: 6px;*/}
         #${id} > section.window-content > div.dialog-content > div.ffs > span { white-space: nowrap;  position: absolute; }
         #${id} > section.window-content , #${id} > section.window-content > div.dialog-content > div.ffs {overflow:hidden;}
+        ${hideContextIcons?`#${id} > section.window-content > div.dialog-content > div.ffs > span > a > i {display:none;} `:''}
       </style>`));
       // remove dialog background
       html.parent().css({background:'unset'});
-
+      
       // apply config styles
       $sheet.css({
         'transform-origin': 'top left',
@@ -426,6 +427,12 @@ Actor.prototype.freeformSheet = async function(name) {
       },
       close:(html)=>{ return }
     },{...$(this).offset(), width: 150, id: `${id}-font-dialog`}).render(true);
+  })
+  .contextmenu(async function(){
+    let hideContextIcons = !ffs[id].hideContextIcons;
+    ffs[id].hideContextIcons = hideContextIcons;
+    await character.setFlag('ffs', name, {config: {hideContextIcons}});
+    d.render(true);
   }).dblclick(function(e){e.stopPropagation();}));
 
   $header.find('h4.window-title').after($(`<a title="Sheet Filters" ><i class="fas fa-eye"></i></a>`).click( async function(e){
@@ -461,7 +468,7 @@ Actor.prototype.freeformSheet = async function(name) {
       },
       close:(html)=>{ 
         if (confirm) return;
-        if (character.getFlag('ffs', name).filter) 
+        if (character.getFlag('ffs', name).config.filter) 
             $(`#${id}`).find('.ffs').css({filter: character.getFlag('ffs', name).config.filter});
           else
             $(`#${id}`).find('.ffs').css({filter: 'unset'});
@@ -519,7 +526,7 @@ Actor.prototype.freeformSheet = async function(name) {
   }).dblclick(function(e){e.stopPropagation();}));
 
   if (Object.keys(game.settings.get('ffs', 'sheets')).length>1)
-  $header.find('h4.window-title').after($(`<a title="Sheets" ><i class="fas fa-file-alt"></i></a>`).click( async function(e){
+  $header.find('h4.window-title').prepend($(`<a title="Sheets" style="margin: 0 .5em 0 0;"><i class="fas fa-file-alt"></i></a>`).click( async function(e){
     ffs.sheets(character, e);
   }).dblclick(function(e){e.stopPropagation();}));
 
@@ -789,7 +796,6 @@ Hooks.once("init", async () => {
     name: `Override Player's Actor Sheets`,
     hint: `Players will not be able to access the system character sheets.`,
     scope: "world",
-    config: true,
     type: Boolean,
     default: false,
     config: true
@@ -799,7 +805,6 @@ Hooks.once("init", async () => {
     name: `Default Sheet`,
     hint: `Sheet to show when `,
     scope: "world",
-    config: true,
     type: String,
     choices: Object.keys(game.settings.get('ffs', 'sheets')).reduce((a,k)=>{return a= {...a, [k]:k}},{default:""}),
     default: "default",
