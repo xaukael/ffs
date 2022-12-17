@@ -34,12 +34,14 @@ Actor.prototype.freeformSheet = async function(name) {
   ffs[id] = {...ffs[id], ...character.getFlag('ffs',`${name}.config`), ...sheet};
   //console.log(name, ffs[id])
   let options = {width: 'auto', height: 'auto', id}
+  /*
   if (ffs[id].width && ffs[id].height)
     options = {...options, ...{width: ffs[id].width*ffs[id].scale+16, height: ffs[id].height*ffs[id].scale+46}};
     if (!ffs[id].left) {
     let i = await loadTexture(ffs[id].background);
     options = {...options, ...{width: i.orig.width*ffs[id].scale+16, height: i.orig.height*ffs[id].scale+46}}
   }
+  */
   if (ffs[id].position) options = {...options, ...ffs[id].position}
 
   let newSpan = async function(key, value){
@@ -236,10 +238,10 @@ Actor.prototype.freeformSheet = async function(name) {
 
   let d = new Dialog({
     title: `${character.name}`,
-    content: `<div class="ffs"></div>`,
+    content: `<div class="sizer"><div class="ffs" style="height:${ffs[id].height}px; width:${ffs[id].width}px;"></div></div>`,
     buttons: {},
     render: async (html)=>{
-      //console.log(`${id} render`)
+      //console.log(`${id} render`, ffs[id])
       let {width, height, left, top, background, color , scale , fontFamily, fontWeight, filter, locked, hideContextIcons} = ffs[id];
 
       // apply configs
@@ -247,19 +249,24 @@ Actor.prototype.freeformSheet = async function(name) {
       let $sheet = html.find('div.ffs');
 
       $sheet.before($(`<style>
-        #${id} > section.window-content > div.dialog-content > div.ffs {font-family: ${fontFamily}; font-weight: ${fontWeight}; cursor: cell; position: relative;}
-        #${id} > section.window-content > div.dialog-content > div.ffs.locked {cursor: default;}
-        #${id} > section.window-content > div.dialog-content > div.ffs.locked > span {cursor: default !important;}
-        #${id} > section.window-content > div.dialog-content > div.ffs * {border: unset !important; padding: 0; background: unset; background-color: unset; color: ${color} !important;} 
-        #${id} > section.window-content > div.dialog-content > div.ffs > span > input:focus {box-shadow: unset; } 
-        #${id} > section.window-content > div.dialog-content > div.ffs > span:focus-visible {outline-color:white; outline:unset; /*outline-style: outset; outline-offset: 6px;*/}
-        #${id} > section.window-content > div.dialog-content > div.ffs > span { white-space: nowrap;  position: absolute; }
-        #${id} > section.window-content , #${id} > section.window-content > div.dialog-content > div.ffs {overflow:hidden;}
+        #${id} {height: auto !important; width: auto !important;}
+        #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs {font-family: ${fontFamily}; font-weight: ${fontWeight}; cursor: cell; position: relative;}
+        #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs.locked {cursor: default;}
+        #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs.locked > span {cursor: default !important;}
+        #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs * {border: unset !important; padding: 0; background: unset; background-color: unset; color: ${color} !important;} 
+        #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span > input:focus {box-shadow: unset; } 
+        #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span:focus-visible {outline-color:white; outline:unset; /*outline-style: outset; outline-offset: 6px;*/}
+        #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span { white-space: nowrap;  position: absolute; }
         ${hideContextIcons?`#${id} > section.window-content > div.dialog-content > div.ffs > span > a > i {display:none;} `:''}
       </style>`));
       // remove dialog background
+      //#${id} > section.window-content , #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs, #${id} > section.window-content > div.dialog-content > div.sizer
+      //{overflow:hidden;}
       html.parent().css({background:'unset'});
       
+      $sheet.parent().css({height: `${height*scale}px`, width: `${width*scale}px`})
+      
+      //console.log(d._element.width(),d._element.height(), $sheet.parent().width(), $sheet.parent().height())
       // apply config styles
       $sheet.css({
         'transform-origin': 'top left',
@@ -267,9 +274,10 @@ Actor.prototype.freeformSheet = async function(name) {
         'filter': filter,
         'background-image': `url(${background})`,
         'background-repeat' : 'no-repeat',
-        'background-position': `top -${top}px left -${left}px`,
-        'height': `${height}px`,'width': `${width}px`
+        'background-position': `top -${top}px left -${left}px`
       });
+      //'height': `${height}px`,'width': `${width}px`
+      
 
       if (locked) $sheet.addClass('locked')
       else $sheet.removeClass('locked')
@@ -307,6 +315,7 @@ Actor.prototype.freeformSheet = async function(name) {
       });
 
       if (locked) html.find(`.ffs > span`).draggable('disable')
+      
     },
     close: async (html)=>{
         if (ffs[id].hook) Hooks.off(`update${this.documentName}`, ffs[id].hook);
@@ -329,7 +338,7 @@ Actor.prototype.freeformSheet = async function(name) {
       if (doc.id!=character.id) return;
       if (!d.element) return;
       if (foundry.utils.hasProperty(updates, "flags.ffs")) return true;
-      d.render(true, { width: ffs[id].width*ffs[id].scale+16, height: ffs[id].height*ffs[id].scale+46});
+      d.render(true);//, { width: ffs[id].width*ffs[id].scale+16, height: ffs[id].height*ffs[id].scale+46}
     })
 
   let waitRender = 100;
@@ -484,7 +493,7 @@ Actor.prototype.freeformSheet = async function(name) {
     ffs[id].scale = scale;
     $header.find('a.zoom > b').text(Math.round(scale*100)+'%')
     await character.setFlag('ffs', name, {config: {scale}})
-    d.render(true, { width: width*scale+16, height: height*scale+46});
+    d.render(true)
   }).dblclick(function(e){e.stopPropagation();}));
 
   $header.find('h4.window-title').after($(`<a class="zoom" title="Reset Scale"><b>${Math.round(ffs[id].scale*100)}%</b></a>`).click( async function(e) {
@@ -493,7 +502,7 @@ Actor.prototype.freeformSheet = async function(name) {
     ffs[id].scale = 1;
     $header.find('a.zoom > b').text(Math.round(scale*100)+'%')
     await character.setFlag('ffs', name, {config: {scale}})
-    d.render(true, { width: width+16, height: height+46});
+    d.render(true)
   }).dblclick(function(e){e.stopPropagation();}));
 
   $header.find('h4.window-title').after($(`<a title="Zoom Out" ><i class="fas fa-minus"></i></a>`).click( async function(e){
@@ -504,7 +513,7 @@ Actor.prototype.freeformSheet = async function(name) {
     ffs[id].scale = scale;
     $header.find('a.zoom > b').text(Math.round(scale*100)+'%')
     await character.setFlag('ffs', name, {config: {scale}})
-    d.render(true, { width: width*scale+16, height: height*scale+46});
+    d.render(true)
   }).dblclick(function(e){e.stopPropagation();}));
 
   $header.find('h4.window-title').after($(`<a title="Drag Lock" ><i class="fas fa-lock${ffs[id].locked?'':'-open'}"></i></a>`).click( async function(e){
@@ -526,7 +535,7 @@ Actor.prototype.freeformSheet = async function(name) {
   }).dblclick(function(e){e.stopPropagation();}));
 
   if (Object.keys(game.settings.get('ffs', 'sheets')).length>1)
-  $header.find('h4.window-title').prepend($(`<a title="Sheets" style="margin: 0 .5em 0 0;"><i class="fas fa-file-alt"></i></a>`).click( async function(e){
+  $header.find('h4.window-title').before($(`<a title="Sheets" style="margin: 0 .5em 0 0;"><i class="fas fa-file-alt"></i></a>`).click( async function(e){
     ffs.sheets(character, e);
   }).dblclick(function(e){e.stopPropagation();}));
 
@@ -549,7 +558,7 @@ ffs.sheets = async function(actor, e=null) {
     content +=`
     <a class="sheet" name="${name}" title="${name}" style="width:${(config.width)/4}px; height:${(config.height)/4}px; overflow: hidden;
     background: url(${config.background}) no-repeat; background-position: top -${config.top/4}px left -${config.left/4}px;
-    background-size: ${i.orig.width/4}px ${i.orig.height/4}px; margin: 0px 10px 10px 10px;">
+    background-size: ${i.orig.width/4}px ${i.orig.height/4}px; margin: 0px 10px 10px 10px; filter: ${actor.getFlag('ffs', name)?.config?.filter};">
     </a>`;
   }
   content += `</center>`;
