@@ -70,5 +70,9 @@ Fonts can be added through the core font settings.
   - fixed bug where cancelling filter would unset all filters
   - moved other sheets button to icon in front of header
   - added option to hide content link icons, right click the 'A' where fonts are set. Will look for better place for that setting later
+  
+1.7.3
+  - better auto sizing accounting for the possibility that a style adjusts the window padding
+  - fixed header's sheet button changing to a name
 
 ![Freefrom Sheet Example](https://github.com/xaukael/ffs/blob/248ea21e6173638bd022dd68055fe5554ab6f847/ffs-example.jpg)
