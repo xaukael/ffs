@@ -1,0 +1,75 @@
+<html>
+<head>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+<script src="https://code.jquery.com/ui/1.13.1/jquery-ui.js" id="jquery-ui"></script>
+
+<style>
+:focus-visible {outline-color:white; outline-style: unset; outline-offset: 6px;}
+</style>
+</head>
+<body onload="onload()" style="position: relative; cursor: cell;">
+<script>
+function onload() {
+  $('body').contextmenu(function(e){
+    e.preventDefault();
+    if (e.target.nodeName != "BODY") return;
+    let $span = $(`<span style="left: ${e.clientX-10}px; top: ${e.clientY-16}px; position: absolute; cursor: text; " spellcheck="false" role="textbox" contenteditable="true">NEW TEXT</span>`)
+    .focusout(async function(){
+      console.log("save:",this.id, $(this).html())
+      $(this).draggable('enable')
+      if ($(this).text().trim()==''||$(this).text().trim()=='NEW TEXT') $(this).remove();
+    })
+    .keydown(function(e){
+      if (e.key != "Enter") return 
+      return $(this).blur()
+    })
+    .focusin(function(){
+      $(this).select()
+      let selection = window.getSelection();
+      let range = document.createRange();
+      range.selectNodeContents(this);
+      selection.removeAllRanges();
+      selection.addRange(range);
+      $(this).draggable('disable')
+    })
+    .contextmenu(function(e){
+      //e.preventDefault();
+    })
+    .draggable({
+      cursor: "grabbing", 
+      start: function(e){
+        $(this).css('pointer-events', 'none');
+      },
+      stop: function(e, d){
+        $(this).css('pointer-events', 'all');
+      },
+      drag: function(event, ui) {
+        ui.position = {left:Math.round(ui.position.left), top:Math.round(ui.position.top)};
+      }
+    })
+    .click(function(e){
+      e.stopPropagation();
+    })
+    .on('wheel', function(e){
+      let change = e.originalEvent.deltaY>0?1:-1;
+      console.log($(this).css('top'))
+      let fontSize = parseInt($(this).css('font-size'));
+      if ( fontSize < 3 && change < 0) return;
+      $(this).css('font-size', fontSize+change*2);
+      $(this).css('top', parseInt($(this).css('top'))+change*-1);
+    })
+    $(this).append($span)
+    $span.focus();
+    let selection = window.getSelection();
+    let range = document.createRange();
+    range.selectNodeContents($span[0]);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  });
+
+}
+</script>
+
+</body>
+</html>
