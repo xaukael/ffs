@@ -8,13 +8,13 @@
 :focus-visible {outline-color:white; outline-style: unset; outline-offset: 6px;}
 </style>
 </head>
-<body onload="onload()" style="position: relative; cursor: cell;">
+<body onload="onload()" style="position: relative; cursor: cell; font-family: Ink Free; font-weight: bold; margin: 0;">
 <script>
 function onload() {
   $('body').contextmenu(function(e){
     e.preventDefault();
     if (e.target.nodeName != "BODY") return;
-    let $span = $(`<span style="left: ${e.clientX-10}px; top: ${e.clientY-16}px; position: absolute; cursor: text; " spellcheck="false" role="textbox" contenteditable="true">NEW TEXT</span>`)
+    let $span = $(`<span style="left: ${e.clientX-10}px; top: ${e.clientY-16}px; position: absolute; cursor: text; font-size: 22px;" spellcheck="false" role="textbox" contenteditable="true">NEW TEXT</span>`)
     .focusout(async function(){
       console.log("save:",this.id, $(this).html())
       $(this).draggable('enable')
@@ -40,13 +40,12 @@ function onload() {
       cursor: "grabbing", 
       start: function(e, ui){
         $(this).css('pointer-events', 'none');
-        ui.position = {left: ui.position.left-8, top: ui.position.top-8};
       },
       stop: function(e, d){
         $(this).css('pointer-events', 'all');
       },
       drag: function(event, ui) {
-        ui.position = {left:Math.round(ui.position.left-8), top:Math.round(ui.position.top-8)};
+        ui.position = {left:Math.round(ui.position.left), top:Math.round(ui.position.top)};
       }
     })
     .click(function(e){
