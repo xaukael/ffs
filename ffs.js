@@ -45,6 +45,7 @@ Actor.prototype.freeformSheet = async function(name) {
   if (ffs[id].position) options = {...options, ...ffs[id].position}
 
   let newSpan = async function(key, value){
+    let updateSizeDebounce = foundry.utils.debounce((character,name,key,fontSize,y)=> character.setFlag('ffs', [`${name}.${key}`], {fontSize, y}) , 500);
     let $span = $(`<span id="${key}" style="cursor: text;">
       ${TextEditor.enrichHTML(Roll.replaceFormulaData(value.text, {...character.getRollData(), name: character.name}))}
     <span>`);
@@ -78,12 +79,13 @@ Actor.prototype.freeformSheet = async function(name) {
       selection.addRange(range);
       $(this).draggable('disable')
     })
-    .bind("wheel", async function(e) {
+    .on("wheel",  function(e) {
       let delta = e.originalEvent.wheelDelta>0?-2:2;
-      let fontSize = Math.max(character.getFlag('ffs', name)[key].fontSize+delta, 2)
-      let top = (character.getFlag('ffs', name)[key].y-delta)
-      $(this).css({fontSize: fontSize +"px", top: top+'px'})
-      await character.setFlag('ffs', [`${name}.${key}`], {fontSize: fontSize, y: top});
+      let fontSize = Math.max(parseInt($(this).css('font-size'))+delta, 2);
+      if (fontSize==2) return console.log('font size minimum reached');
+      let y = (parseInt($(this).css('top'))-delta);
+      $(this).css({fontSize: fontSize +"px", top: y+'px'});
+      updateSizeDebounce(character,name,key,fontSize,y);
     })
     .draggable({
       start: function(e){
@@ -96,13 +98,18 @@ Actor.prototype.freeformSheet = async function(name) {
         let scale = Number($(this).parent().css('transform').split('matrix(')[1].split(',')[0])
         let original = data.originalPosition;
         data.position = {
-          left: (e.clientX-click.x+original.left)/scale,
-          top:  (e.clientY-click.y+original.top )/scale
+          left: Math.round((e.clientX-click.x+original.left)/scale),
+          top:  Math.round((e.clientY-click.y+original.top )/scale)
         };
         $(this).css('cursor', 'grabbing');
       },
-      stop: async function(e, d){
-        await character.setFlag('ffs', [`${name}.${key}`], {x: d.position.left, y: d.position.top});
+      stop: async function(e, data){
+        let scale = Number($(this).parent().css('transform').split('matrix(')[1].split(',')[0])
+        data.position = {
+          left: Math.round((e.clientX-click.x+data.originalPosition.left)/scale),
+          top:  Math.round((e.clientY-click.y+data.originalPosition.top )/scale)
+        };
+        await character.setFlag('ffs', [`${name}.${key}`], {x: data.position.left, y: data.position.top});
         //$(this).css('pointer-events', 'all')
         $(this).css('cursor','text');
       }
@@ -187,8 +194,8 @@ Actor.prototype.freeformSheet = async function(name) {
                 html.find('input').val('@'+$(this).parent().data().path.replace('system.','').replace('data.data.', ''))
               })
               $('body').append($atOptions)
-              html.find('input').focus().select();
             })
+            html.find('input').focus().select();
           },
           close: ()=>{
             $(`#${key}`).css({'text-shadow': ''})
@@ -256,8 +263,8 @@ Actor.prototype.freeformSheet = async function(name) {
         #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs * {border: unset !important; padding: 0; background: unset; background-color: unset; color: ${color} !important;} 
         #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span > input:focus {box-shadow: unset; } 
         #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span:focus-visible {outline-color:white; outline:unset; /*outline-style: outset; outline-offset: 6px;*/}
-        #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span { white-space: nowrap;  position: absolute; }
-        ${hideContextIcons?`#${id} > section.window-content > div.dialog-content > div.ffs > span > a > i {display:none;} `:''}
+        #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span { white-space: nowrap; position: absolute; }
+        ${hideContextIcons?`#${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span > a > i {display:none;} `:''}
       </style>`));
       // remove dialog background
       //#${id} > section.window-content , #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs, #${id} > section.window-content > div.dialog-content > div.sizer
@@ -299,7 +306,7 @@ Actor.prototype.freeformSheet = async function(name) {
         $(this).append($span);
         $span.contextmenu();
       })
-      .bind('drop', async function(e){
+      .on('drop', async function(e){
         if (locked) return;
         e.originalEvent.preventDefault();
         let data = JSON.parse(e.originalEvent.dataTransfer.getData("Text"));
@@ -636,6 +643,7 @@ ffs.configure = async function(name) {
       })
       c._element.find('h4.window-title').after($(`<a title="Change Image" ><i class="fas fa-image"></i></a>`).click(async function(){
         return new FilePicker({
+          title: "Select a new image",
           type: "image",
           displayMode: 'tiles',
           callback: async (path) => {
@@ -654,7 +662,7 @@ ffs.configure = async function(name) {
               html.find('img').attr('src', path)
               c.setPosition()
             }
-          }).browse();
+          }).render(true);
       }));
       
     },
