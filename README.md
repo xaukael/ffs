@@ -76,7 +76,7 @@ Fonts can be added through the core font settings.
   - fixed header's sheet button changing to a name
 
 1.7.4
-  - span positions now only save as whole integers
+  - span positions rounded so they save as whole integers
   - size updated debounced to reduce update spam
 
 ![Freefrom Sheet Example](https://github.com/xaukael/ffs/blob/248ea21e6173638bd022dd68055fe5554ab6f847/ffs-example.jpg)
