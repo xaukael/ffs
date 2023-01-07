@@ -47,7 +47,7 @@ Actor.prototype.freeformSheet = async function(name) {
   let newSpan = async function(key, value){
     let updateSizeDebounce = foundry.utils.debounce((character,name,key,fontSize,y)=> character.setFlag('ffs', [`${name}.${key}`], {fontSize, y}) , 500);
     let $span = $(`<span id="${key}" style="cursor: text;">
-      ${TextEditor.enrichHTML(Roll.replaceFormulaData(value.text, {...character.getRollData(), name: character.name}))}
+      ${await TextEditor.enrichHTML(Roll.replaceFormulaData(value.text, {...character.getRollData(), name: character.name}), {async:true})}
     <span>`);
     $span.css({position:'absolute', left: value.x+'px', top: value.y+'px', color: 'black', fontSize: value.fontSize})
     let click = {x: 0, y: 0};
@@ -60,7 +60,7 @@ Actor.prototype.freeformSheet = async function(name) {
         await character.unsetFlag('ffs', `${name}.${key}`);
         return $(this).remove();
       }
-      $(this).html(TextEditor.enrichHTML(Roll.replaceFormulaData(input,{...character.getRollData(), name: character.name})))
+      $(this).html(await TextEditor.enrichHTML(Roll.replaceFormulaData(input,{...character.getRollData(), name: character.name}), {async:true}))
       await character.setFlag('ffs', [`${name}.${key}`], {text: input});
       $(this).draggable('enable')
       $(this).prop('role',"")
@@ -138,7 +138,7 @@ Actor.prototype.freeformSheet = async function(name) {
               await character.unsetFlag('ffs', `${name}.${key}`);
               return $(this).remove();
             }
-            $(this).html(TextEditor.enrichHTML(Roll.replaceFormulaData(input, {...{name: character.name}, ...character.getRollData()})))
+            $(this).html(await TextEditor.enrichHTML(Roll.replaceFormulaData(input, {...{name: character.name}, ...character.getRollData()}), {async:true}))
             await character.setFlag('ffs', `${name}.${key}`, {text: input});
           }},
           cancel: {label:"Cancel", icon: '<i class="fas fa-times"></i>',callback: async (html)=>{}}},
@@ -625,7 +625,7 @@ ffs.configure = async function(name) {
     content: `<div class="ffs" style="position: relative; width: ${width}px; height:${height}px; margin: 10px;">
       <img src="${config.background}" style="position: absolute;">
       <div class="sizer ui-widget-content" style="background: unset; position: absolute; left: ${config.left}px; top:${config.top}px; width:${config.width}px; height: ${config.height}px; border: 2px dashed red;"></div>
-    </div>`,
+    </div><style>#${name}-ffs-configuration {height: auto !important; width: auto !important;}</style>`,
     buttons: {confirm: {label:"Confirm", icon: '<i class="fas fa-check"></i>', callback: async (html)=>{
       confirm = true;
       let sheets = {...game.settings.get('ffs', 'sheets'), ...{[name]: config}}
@@ -644,7 +644,8 @@ ffs.configure = async function(name) {
         stop: async function( event, ui ) {
           config = {...config, ...ui.position}
         }
-      })
+      });
+      
       c._element.find('h4.window-title').after($(`<a title="Change Image" ><i class="fas fa-image"></i></a>`).click(async function(){
         return new FilePicker({
           title: "Select a new image",
@@ -837,22 +838,29 @@ Hooks.once("init", async () => {
 Hooks.on('renderActorSheet', (app, html, data)=>{
   if (!game.settings.get('ffs', 'overridePlayerCharacterSheet')) return;
   if (game.user.isGM) return;
-  if (game.settings.get('ffs', 'defaultSheet')=="") return ui.notifications.warn('No default sheet selected.')
+  if (game.settings.get('ffs', 'defaultSheet')=="default") return ui.notifications.warn('No default sheet selected.')
   app.object.freeformSheet(game.settings.get('ffs', 'defaultSheet'))
   html.css({display:'none'})
   html.ready(function(){app.close()})
-  //game.macros.getName("Character Journal").execute()
 });
 
 Hooks.on('getActorSheetHeaderButtons', (app, buttons)=>{
   if (Object.keys(game.settings.get('ffs', 'sheets')).length)
   buttons.unshift({
-    "label": "Freeform Sheets",
-    "class": "ffs-sheets",
+    "label": "Freeform Sheet",
+    "class": "ffs-sheet",
     "icon": "fas fa-file-alt",
     onclick: (e)=>{
+      let defaultSheet = game.settings.get('ffs', 'defaultSheet');
+      if (defaultSheet!='default') return app.object.freeformSheet(defaultSheet)
       ffs.sheets(app.object, e);
     }
+  })
+})
+
+Hooks.on('renderActorSheet', (app, html)=>{
+  html.find('a.header-button.ffs-sheet').contextmenu(function(e){
+    ffs.sheets(app.object, e);
   })
 })
 
