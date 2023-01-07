@@ -1,5 +1,5 @@
 # Freeform Sheets
-Allows creation of any number of configurable sheets for your character from image files.
+Create configurable sheets for your character from image files.
 
 Supports: inline rolls, entity links, other enriched data, @attribute replacement for core actor fields as well as roll data.
 
