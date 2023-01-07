@@ -86,7 +86,7 @@ Actor.prototype.freeformSheet = async function(name) {
       change *= e.originalEvent.wheelDelta>0?-1:1;
       fontSize = Math.max(fontSize+change*2, 2);
       if (fontSize==2) return console.log('font size minimum reached');
-      let y = (parseInt($(this).css('top'))-change);
+      let y = (parseInt($(this).css('top'))-change*2);
       $(this).css({fontSize: fontSize +"px", top: y+'px'});
       updateSizeDebounce(character,name,key,fontSize,y);
     })
@@ -241,9 +241,15 @@ Actor.prototype.freeformSheet = async function(name) {
         },
         close: ()=>{ return
         }
-      },{...options, id: `${id}-${key}-value-dialog`}).render(true)
-
+      },{...options, id: `${id}-${key}-value-dialog`}).render(true);
     })
+    /*
+    .click(async function(e){
+      console.log(e)
+      if (e.target!=e.currentTarget) return console.log('event stop');
+      $(this).contextmenu();
+    })
+    */
     return $span;
   }
 
@@ -302,7 +308,7 @@ Actor.prototype.freeformSheet = async function(name) {
       
       $sheet.contextmenu(async function(e){
         if (locked) return;
-        if (e.originalEvent.target.nodeName != "DIV") return;
+        if (!!e?.originalEvent && e?.originalEvent?.target.nodeName != "DIV") return;
         let id = randomID();
         let value = {x: e.offsetX, y: e.offsetY-8, text: e.ctrlKey?"@":"NEW TEXT", fontSize: 16};
         await character.setFlag('ffs', [`${name}`], {[`${id}`]: value});
@@ -323,7 +329,7 @@ Actor.prototype.freeformSheet = async function(name) {
         await character.setFlag('ffs', [`${name}`], {[`${id}`]: value});
         let $span = await newSpan(id, value);
         $(this).append($span);
-      });
+      })
 
       if (locked) html.find(`.ffs > span`).draggable('disable')
       
