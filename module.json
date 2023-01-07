@@ -5,7 +5,7 @@
     "title": "Freeform Sheet",
     "description": "Create character sheet for any system from just an image. Place text, stats, and content links anywhere at any size",
     "author": "Xaukael",
-    "version": "1.7.4",
+    "version": "1.7.5",
     "minimumCoreVersion": "9",
     "compatibleCoreVersion": "10",
     "scripts": ["ffs.js", "jquery-ui.min.js"],

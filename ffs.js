@@ -79,11 +79,15 @@ Actor.prototype.freeformSheet = async function(name) {
       selection.addRange(range);
       $(this).draggable('disable')
     })
-    .on("wheel",  function(e) {
-      let delta = e.originalEvent.wheelDelta>0?-2:2;
-      let fontSize = Math.max(parseInt($(this).css('font-size'))+delta, 2);
+    .on("wheel", function(e) {
+      let fontSize = parseInt($(this).css('font-size'))
+      let change = 1;
+      if (e.shiftKey) change = Math.max(Math.floor(fontSize/12), 1);
+      change *= e.originalEvent.wheelDelta>0?-1:1;
+      fontSize = Math.max(fontSize+change*2, 2);
+      console.log(change, fontSize);
       if (fontSize==2) return console.log('font size minimum reached');
-      let y = (parseInt($(this).css('top'))-delta);
+      let y = (parseInt($(this).css('top'))-change);
       $(this).css({fontSize: fontSize +"px", top: y+'px'});
       updateSizeDebounce(character,name,key,fontSize,y);
     })
@@ -146,18 +150,18 @@ Actor.prototype.freeformSheet = async function(name) {
             .mouseenter(function(){$(`#${key}`).css({'text-shadow': '0 0 8px green'})})
             .mouseleave(function(){$(`#${key}`).css({'text-shadow': ''})})
             
-            function buildObjectElements(el, objectPath) {
-              let property = getProperty(character, objectPath)
+            function buildObjectElements(rollData, el, objectPath) {
+              let property = getProperty(rollData, objectPath)
               if (property===null) return;
               for (let key of Object.keys(property)) {
-                let prop = foundry.utils.getProperty(character, `${objectPath}.${key}`)
+                let prop = foundry.utils.getProperty(rollData, `${objectPath}.${key}`)
                 if (typeof(prop) === 'object') {
                   let objectel = $(`
                   <div class="object-path" data-path="${objectPath}.${key}" style="${objectPath=="system"?'':'margin-left: 1em;'}">
                     <a>${key} +</a>
                   </div>`)
                   el.append(objectel)
-                  buildObjectElements(objectel, `${objectPath}.${key}`)
+                  buildObjectElements(rollData, objectel, `${objectPath}.${key}`)
                 }
                 else
                   el.append($(
@@ -183,15 +187,16 @@ Actor.prototype.freeformSheet = async function(name) {
                 if ($(this).hasClass('hide'))
                   $(this).remove();
               })
-              
-              buildObjectElements($atOptions, `${(game.release?.generation >= 10)?'system':'data.data'}`)
+              let rollData = {};
+              rollData.system = character.getRollData();
+              buildObjectElements(rollData, $atOptions, `system`)//${(game.release?.generation >= 10)?'':''}
               $atOptions.find(`.object-path, .value-path`).hide()
               $atOptions.children(`.object-path, .value-path`).show()
               $atOptions.find(`a`).click(function(){
                 $(this).parent().children('div').toggle()
               })
               $atOptions.find(`.value-path > a`).click(function(){
-                html.find('input').val('@'+$(this).parent().data().path.replace('system.','').replace('data.data.', ''))
+                html.find('input').val('@'+$(this).parent().data().path.replace('system.',''))
               })
               $('body').append($atOptions)
             })
