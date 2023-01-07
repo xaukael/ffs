@@ -85,7 +85,6 @@ Actor.prototype.freeformSheet = async function(name) {
       if (e.shiftKey) change = Math.max(Math.floor(fontSize/12), 1);
       change *= e.originalEvent.wheelDelta>0?-1:1;
       fontSize = Math.max(fontSize+change*2, 2);
-      console.log(change, fontSize);
       if (fontSize==2) return console.log('font size minimum reached');
       let y = (parseInt($(this).css('top'))-change);
       $(this).css({fontSize: fontSize +"px", top: y+'px'});
