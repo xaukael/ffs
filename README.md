@@ -79,4 +79,8 @@ Fonts can be added through the core font settings.
   - span positions rounded so they save as whole integers
   - font size updates debounced to reduce update spam
 
+1.7.5
+  - @ button in span dialog now pulls roll data instead of just data.data or system
+  - shift+wheel will now scale font quicker at larger font sizes
+
 ![Freefrom Sheet Example](https://github.com/xaukael/ffs/blob/248ea21e6173638bd022dd68055fe5554ab6f847/ffs-example.jpg)
