@@ -9,6 +9,10 @@ Fonts can be added through the core font settings.
 ![Freefrom Sheet Example](https://github.com/xaukael/ffs/blob/248ea21e6173638bd022dd68055fe5554ab6f847/ffs-example.jpg)
 
 Updates
+1.8.0
+  - font size is adjusted 1px at a time now, use shift to change rapidly
+  - improved/updated help dialog text
+  - dialog will appear on ready if no sheets are configured to direct to sheets config or disabling the module
 
 1.7.7
   - resize of text fonts adjusts y value to keep the bottom static again
