@@ -45,7 +45,11 @@ Actor.prototype.freeformSheet = async function(name) {
   if (ffs[id].position) options = {...options, ...ffs[id].position}
 
   let newSpan = async function(key, value){
-    let updateSizeDebounce = foundry.utils.debounce((character,name,key,fontSize,y)=> character.setFlag('ffs', [`${name}.${key}`], {fontSize, y}) , 500);
+    let updateSizeDebounce = foundry.utils.debounce((character,name,key,fontSize,y)=> {
+      character.setFlag('ffs', [`${name}.${key}`], {fontSize, y}) 
+      $('.font-tooltip').remove();
+    }, 500);
+    
     let $span = $(`<span id="${key}" style="cursor: text;">
       ${await TextEditor.enrichHTML(Roll.replaceFormulaData(value.text, {...character.getRollData(), name: character.name}), {async:true})}
     <span>`);
@@ -84,10 +88,12 @@ Actor.prototype.freeformSheet = async function(name) {
       let change = 1;
       if (e.shiftKey) change = Math.max(Math.floor(fontSize/12), 1);
       change *= e.originalEvent.wheelDelta>0?-1:1;
-      fontSize = Math.max(fontSize+change*2, 2);
+      fontSize = Math.max(fontSize+change, 2);
       if (fontSize==2) return console.log('font size minimum reached');
-      let y = (parseInt($(this).css('top'))-change*2);
+      let y = (parseInt($(this).css('top'))-change);
       $(this).css({fontSize: fontSize +"px", top: y+'px'});
+      $('.font-tooltip').remove();
+      $('body').append($(`<span class="font-tooltip" style="position: absolute; top: ${e.clientY-10}px; left: ${e.clientX+10}px; pointer-events: none; color: white; background: #000; border: 1px solid white; padding:2px; z-index:1000;">${fontSize}px</span>`));
       updateSizeDebounce(character,name,key,fontSize,y);
     })
     .draggable({
@@ -377,24 +383,30 @@ Actor.prototype.freeformSheet = async function(name) {
     new Dialog({
       title: `Freeform Sheet Help`,
       content: `<center>
-      <p>Right-Click somewhere with the <b>+</b> cursor to spawn a NEW TEXT.</p>
-      <p>Right-Click existing text elements while the text cursor is showing to edit the text.</p>
-      <p>Changes to the text will be saved on focus loss or pressing Enter. If there is no text entered or the value is still "NEW TEXT" the element will be removed.</p>
-      <p>Fields with an <b>@</b> will open a dialog because these texts can be rather long and do not show when rendered on the sheet.</p>
-      <p>Double Clicking an <b>@</b> field will open a dialog to edit it's value.</p>
-      <p>You can force the dialog to open for a field by holding Ctrl when you Right-Click</p>
-      <p>Click and drag saved text elements to reposition</p>
-      <p>When hovering an element, the scroll wheel can be used to adjust the size of the text.</p>
-      <p>Entities can be dragged from the sidebar. Macros can be dragged from the hotbar or macro directory. These will create clickable links to content on the sheet.</p>
-      <p>The <i class="fas fa-font"></i> icon in the header will show the font config. More fonts may be added by the GM in Foundry's core settings under <b>Additional Fonts</b>.</p>
+      <p><b>Right-Click</b> anywhere on the sheet with the <i class="fas fa-plus"></i> cursor to spawn a <b>"NEW TEXT"</b> element.</p>
+      <p><b>Right-Click</b> existing text elements while the text cursor is showing to edit the text.</p>
+      <p>Changes to the text will be saved on focus loss (clicking something else) or pressing <b>Enter</b>. <br>If there is no text entered or the value is still "NEW TEXT" the element will be removed.</p>
+      <p>Fields with an <i class="fas fa-at"></i> will open a dialog because these texts can be rather long and show the value rather than the placeholder when rendered on the sheet.</p>
+      <p>You can force this dialog to open for a field by holding <b>Ctrl</b> when you <b>Right-Click</b>.</p>
+      <p><b>Double Left-Click</b> a text defined by an <i class="fas fa-at"></i> to open a dialog to edit the referenced value. <br>This only works on actor data that can be edited.</p>
+      <p><b>Left-Click</b> and <b>Drag</b> text elements to reposition them</p>
+      <p><b>Scroll</b> while hovering a text element to adjust the size of the text.<br> Hold <b>Shift</b> while scrolling to rapidly scale.</p>
+      <p>Entities can be dragged to the sheet from their directories or from sheets. <br>This will create clickable links to content on the sheet. 
+      <br><b>Right-Click</b> the <i class="fas fa-font"></i> icon in the header to toggle the icons for content links.</p>
+      <p>The <i class="fas fa-font"></i> icon in the header will show the font config. 
+      <br>In v10, more fonts may be added by the GM in Foundry's core settings under <b><a onclick="new FontConfig().render(true)">Additional Fonts</a></b>.
+      <br>In v9, users will need to type in a valid font name.</p>
       <p>The <i class="fas fa-eye"></i> icon in the header will show the sheet filter config.</p>
-      <p>The <i class="fas fa-lock"></i> icon in the header will toggle dragging.</p>
+      <p>The <i class="fas fa-lock"></i> icon in the header will toggle locking of the elements on the sheet.
+      <br>No changes can be made to the elements on the sheet while locked.
+      <br>Content links can still be clicked, and <i class="fas fa-at"></i> texts can still be double clicked to edit.
+      </p>
       </center>`,
       buttons: {},
       render: (html)=>{ 
       },
       close:(html)=>{ return }
-    },{width: 550, id: `${id}-help-dialog`}).render(true);
+    },{width: 600, id: `${id}-help-dialog`}).render(true);
   }).dblclick(function(e){e.stopPropagation();}));
 
   $header.find('h4.window-title').after($(`<a><i class="fas fa-font"></i></a>`).click(function(e){
@@ -571,7 +583,6 @@ ffs.sheets = async function(actor, e=null) {
   let content = `<center>`;
   for (let [name, config] of Object.entries(game.settings.get('ffs', 'sheets'))) {
     let i = await loadTexture(config.background);
-    console.log(i.orig, config)
     content +=`
     <a class="sheet" name="${name}" title="${name}" style="width:${(config.width)/4}px; height:${(config.height)/4}px; overflow: hidden;
     background: url(${config.background}) no-repeat; background-position: top -${config.top/4}px left -${config.left/4}px;
@@ -689,14 +700,15 @@ class ffsSettingsApp extends Dialog {
     this.data = {
     title: `Freeform Sheets Configuration`,
     content: `<button class="add" style="margin-bottom: 1em;"><i class="fas fa-plus"></i>Add Sheet</button><center class="sheets"></center>`,
-    render: (html)=>{
+    render: async (html)=>{
       let d = this;
       html.find('.sheets').append($(Object.entries(game.settings.get('ffs', 'sheets')).reduce((a, [name, config])=> {
-        return a+=`<div style="margin-bottom:.5em;"><h2>${name}<a class="delete" name="${name}" style="float:right"><i class="fas fa-times"></i></a></h2>
+      return a+=`<div style="margin-bottom:.5em;"><h2>${name}<a class="delete" name="${name}" style="float:right"><i class="fas fa-times"></i></a></h2>
         <a class="configure" name="${name}" ><img src="${config.background}" height=300></a><br>
         <button class="template" name="${name}" style="width: 200px">${game.actors.find(a=>a.getFlag('ffs', name)?.template)?'Edit':'Create'} Template Actor</button>
+        <button class="default" name="${name}" style="width: 200px">${(game.settings.get('ffs', 'defaultSheet') == name)?'Default':'Set Default'}</button>
         </div>
-        `}	,``)));
+        `}	,``)));//
       d.setPosition({height: 'auto'});
       html.find('a.configure').click(function(){ffs.configure(this.name);});
       html.find('a.delete').click(async function(){
@@ -707,6 +719,10 @@ class ffsSettingsApp extends Dialog {
         await game.settings.set('ffs', 'sheets', sheets);
         d.render(true);
       });
+      html.find('button.default').click(async function(){
+        await game.settings.set('ffs', 'defaultSheet', this.name);
+        d.render(true);
+      })
       html.find('button.add').click(async function(){
         let name = await Dialog.prompt({
           title:'Input sheet Name',
@@ -915,4 +931,37 @@ Hooks.on('getActorDirectoryEntryContext', (app, options)=>{
       );
     }
   }
+});
+
+Hooks.on('ready', ()=>{
+  if (!game.user.isGM) return;
+  if (Object.keys(game.settings.get('ffs', 'sheets')).length) return;
+  let d = new Dialog({
+    title:'Welcome to Freeform Sheets',
+    content:`<center><p>You currently do not have any freeform sheets configured.<br>&nbsp;</p></center>
+    <div style="display: flex;">
+    <button class="config" style="width:50%;">Open Sheet Config</button>
+    <button class="disable" style="width:50%;">Disable Module</button>
+    </div>
+    `,
+    buttons:{},
+    render:(html)=>{
+      html.find('.config').click(async function(){
+        d.close();
+        new ffsSettingsApp().render(true);
+      });
+      
+      html.find('.disable').click(async function(){
+        let disable = await Dialog.prompt({title:`Disable Freeform Sheets?`,content:`<center><p>Foundry will reload.<br>&nbsp;</p></center>`, callback:(html)=>{return true}, rejectClose: false},{width:100});
+        if (!disable) return false;
+        let modules = game.settings.get("core", ModuleManagement.CONFIG_SETTING);
+        modules.ffs = false;
+        game.settings.set("core", ModuleManagement.CONFIG_SETTING, modules);
+        game.socket.emit("reload");
+        foundry.utils.debouncedReload();
+        return;
+    })
+    },
+    close:()=>{return;}
+  }).render(true)
 })

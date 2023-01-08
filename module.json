@@ -2,10 +2,10 @@
 {
     "id": "ffs",
     "name": "ffs",
-    "title": "Freeform Sheet",
+    "title": "Freeform Sheets",
     "description": "Create character sheet for any system from just an image. Place text, stats, and content links anywhere at any size",
     "author": "Xaukael",
-    "version": "1.7.7",
+    "version": "1.8.0",
     "minimumCoreVersion": "9",
     "compatibleCoreVersion": "10",
     "scripts": ["ffs.js", "jquery-ui.min.js"],
