@@ -82,5 +82,12 @@ Fonts can be added through the core font settings.
 1.7.5
   - @ button in span dialog now pulls roll data instead of just data.data or system
   - shift+wheel will now scale font quicker at larger font sizes
+  
+1.7.6
+  - removed console logs
+
+1.7.7
+  - resize of text fonts adjusts y value to keep the bottom static again
+  - Freeform Sheet button on actor sheets opens default sheet on left click if there is one. Can still right click for list.
 
 ![Freefrom Sheet Example](https://github.com/xaukael/ffs/blob/248ea21e6173638bd022dd68055fe5554ab6f847/ffs-example.jpg)
