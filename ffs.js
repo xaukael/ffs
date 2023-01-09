@@ -44,16 +44,18 @@ Actor.prototype.freeformSheet = async function(name) {
   */
   if (ffs[id].position) options = {...options, ...ffs[id].position}
 
+  let formatText = async function(text) {
+    return await TextEditor.enrichHTML(Roll.replaceFormulaData(text, {...character.getRollData(), name: character.name}), {async:true})
+  }
+
   let newSpan = async function(key, value){
     let updateSizeDebounce = foundry.utils.debounce((character,name,key,fontSize,y)=> {
       character.setFlag('ffs', [`${name}.${key}`], {fontSize, y}) 
       $('.font-tooltip').remove();
     }, 500);
     
-    let $span = $(`<span id="${key}" style="cursor: text;">
-      ${await TextEditor.enrichHTML(Roll.replaceFormulaData(value.text, {...character.getRollData(), name: character.name}), {async:true})}
-    <span>`);
-    $span.css({position:'absolute', left: value.x+'px', top: value.y+'px', color: 'black', fontSize: value.fontSize})
+    let $span = $(`<span id="${key}" style="cursor: text; position: absolute;">${await formatText(value.text)}<span>`);
+    $span.css({left: value.x+'px', top: value.y+'px', fontSize: value.fontSize})
     let click = {x: 0, y: 0};
     $span
     .focusout(async function(){
@@ -64,7 +66,7 @@ Actor.prototype.freeformSheet = async function(name) {
         await character.unsetFlag('ffs', `${name}.${key}`);
         return $(this).remove();
       }
-      $(this).html(await TextEditor.enrichHTML(Roll.replaceFormulaData(input,{...character.getRollData(), name: character.name}), {async:true}))
+      $(this).html(await formatText(input))
       await character.setFlag('ffs', [`${name}.${key}`], {text: input});
       $(this).draggable('enable')
       $(this).prop('role',"")
@@ -104,7 +106,9 @@ Actor.prototype.freeformSheet = async function(name) {
         click.y = e.clientY;
       },
       drag: function(e, data) {
-        let scale = Number($(this).parent().css('transform').split('matrix(')[1].split(',')[0])
+        let scale = Number($(this).parent().css('transform').split('matrix(')[1].split(',')[0]);
+        let appScale = Number($(this).closest('.app').css('transform').split('matrix(')[1]?.split(',')[0]);
+        if (appScale) scale *= appScale;
         let original = data.originalPosition;
         data.position = {
           left: Math.round((e.clientX-click.x+original.left)/scale),
@@ -113,7 +117,9 @@ Actor.prototype.freeformSheet = async function(name) {
         $(this).css('cursor', 'grabbing');
       },
       stop: async function(e, data){
-        let scale = Number($(this).parent().css('transform').split('matrix(')[1].split(',')[0])
+        let appScale = Number($(this).closest('.app').css('transform').split('matrix(')[1]?.split(',')[0]);
+        let scale = Number($(this).parent().css('transform').split('matrix(')[1].split(',')[0]);
+        if (appScale) scale *= appScale;
         data.position = {
           left: Math.round((e.clientX-click.x+data.originalPosition.left)/scale),
           top:  Math.round((e.clientY-click.y+data.originalPosition.top )/scale)
@@ -134,7 +140,7 @@ Actor.prototype.freeformSheet = async function(name) {
         options.top -= 45;
         new Dialog({
           title: key,
-          content: `<input type="text" value="${text}" style="width: calc(100% - 2.2em); margin-bottom:.5em;"></input>
+          content: `<input type="text" value="" style="width: calc(100% - 2.2em); margin-bottom:.5em;"></input>
           <button class="at" style="width: 2em; height: 26px; float: right; line-height: 22px;">@</button>`,
           buttons: {confirm: {label:"Confirm", icon: '<i class="fas fa-check"></i>', callback: async (html)=>{
             confirm = true;
@@ -144,13 +150,13 @@ Actor.prototype.freeformSheet = async function(name) {
               await character.unsetFlag('ffs', `${name}.${key}`);
               return $(this).remove();
             }
-            $(this).html(await TextEditor.enrichHTML(Roll.replaceFormulaData(input, {...{name: character.name}, ...character.getRollData()}), {async:true}))
+            $(this).html(await formatText(input))
             await character.setFlag('ffs', `${name}.${key}`, {text: input});
           }},
           cancel: {label:"Cancel", icon: '<i class="fas fa-times"></i>',callback: async (html)=>{}}},
           default: 'confirm',
           render: (html)=>{
-            
+            $(html).find('input').val(text);
             html.parent().parent() 
             .mouseenter(function(){$(`#${key}`).css({'text-shadow': '0 0 8px green'})})
             .mouseleave(function(){$(`#${key}`).css({'text-shadow': ''})})
