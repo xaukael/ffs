@@ -228,8 +228,9 @@ Actor.prototype.freeformSheet = async function(name) {
     })
     .dblclick(function(e){
       let text = character.getFlag('ffs', name)[key].text;
-      text = text.match(/@([a-z.0-9_\-]+)/gi)[0];
-      if (!text) return; 
+      let match = text.match(/@([a-z.0-9_\-]+)/gi);
+      if (!match) return; 
+      text = match[0];
       text = text.replace('@', '');
       if (!foundry.utils.hasProperty(game.system.model.Actor[character.type], text)) return;
       let val;
