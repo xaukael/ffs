@@ -27,7 +27,7 @@ Actor.prototype.freeformSheet = async function(name) {
   // perform cleanup of empty and NEW TEXT. Should not be necessary
   for (const [key, value] of Object.entries(character.getFlag('ffs', name))) {
     if (ffs.restirctedNames.includes(key)) continue;
-    if (!value.text || $(`<span>${value.text}</span>`).text()=='') 
+    if (!value.text || ($(`<span>${value.text}</span>`).text()==''&& !value.text.includes('img'))) 
       await character.unsetFlag('ffs', `${name}.${key}`)
   }
 
