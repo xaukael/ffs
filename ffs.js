@@ -27,7 +27,7 @@ Actor.prototype.freeformSheet = async function(name) {
   // perform cleanup of empty and NEW TEXT. Should not be necessary
   for (const [key, value] of Object.entries(character.getFlag('ffs', name))) {
     if (ffs.restirctedNames.includes(key)) continue;
-    if (!value.text || ($(`<span>${value.text}</span>`).text()==''&& !value.text.includes('img'))) 
+    if (!value.text || ($(`<span>${value.text}</span>`).text()=='' && !value.text.includes('img'))) 
       await character.unsetFlag('ffs', `${name}.${key}`)
   }
 
@@ -73,22 +73,23 @@ Actor.prototype.freeformSheet = async function(name) {
       $(this).prop('contenteditable',"false")
     })
     .keydown(function(e){
+      e.stopPropagation();
       if (e.key != "Enter") return;
       return $(this).blur();
     })
     .focusin(function(){
-      $(this).select()
+      $(this).select();
       let selection = window.getSelection();
       let range = document.createRange();
       range.selectNodeContents(this);
       selection.removeAllRanges();
       selection.addRange(range);
-      $(this).draggable('disable')
+      $(this).draggable('disable');
     })
     .on("wheel", function(e) {
       let fontSize = parseInt($(this).css('font-size'))
       let change = 1;
-      if (e.shiftKey) change = Math.max(Math.floor(fontSize/12), 1);
+      if (e.shiftKey) change = Math.max(Math.floor(fontSize/12), 1)*2;
       change *= e.originalEvent.wheelDelta>0?-1:1;
       fontSize = Math.max(fontSize+change, 2);
       if (fontSize==2) return console.log('font size minimum reached');
@@ -140,7 +141,7 @@ Actor.prototype.freeformSheet = async function(name) {
         options.top -= 45;
         new Dialog({
           title: key,
-          content: `<input type="text" value="" style="width: calc(100% - 2.2em); margin-bottom:.5em;"></input>
+          content: `<input type="text" value="" style="width: calc(100% - 2.2em); margin-bottom:.5em;" autofocus></input>
           <button class="at" style="width: 2em; height: 26px; float: right; line-height: 22px;">@</button>`,
           buttons: {confirm: {label:"Confirm", icon: '<i class="fas fa-check"></i>', callback: async (html)=>{
             confirm = true;
@@ -156,7 +157,8 @@ Actor.prototype.freeformSheet = async function(name) {
           cancel: {label:"Cancel", icon: '<i class="fas fa-times"></i>',callback: async (html)=>{}}},
           default: 'confirm',
           render: (html)=>{
-            $(html).find('input').val(text);
+            html.find('input').val(text);
+            html.find('input').select();
             html.parent().parent() 
             .mouseenter(function(){$(`#${key}`).css({'text-shadow': '0 0 8px green'})})
             .mouseleave(function(){$(`#${key}`).css({'text-shadow': ''})})
@@ -211,7 +213,7 @@ Actor.prototype.freeformSheet = async function(name) {
               })
               $('body').append($atOptions)
             })
-            html.find('input').focus().select();
+            
           },
           close: ()=>{
             $(`#${key}`).css({'text-shadow': ''})
@@ -251,7 +253,7 @@ Actor.prototype.freeformSheet = async function(name) {
         }}},
         default: 'confirm',
         render: (html) =>{
-          html.find('input').focus().select();
+          html.find('input').select();
         },
         close: ()=>{ return
         }
@@ -333,11 +335,14 @@ Actor.prototype.freeformSheet = async function(name) {
       .on('drop', async function(e){
         if (locked) return;
         e.originalEvent.preventDefault();
-        let data = JSON.parse(e.originalEvent.dataTransfer.getData("Text"));
-        let text = "@"
-        if (game.release?.generation >= 10) text = fromUuidSync(data.uuid).link
-        else text = CONFIG[data.type].collection.instance.get(data.id).link
-        console.log(text)
+        let data;
+        let text = e.originalEvent.dataTransfer.getData("Text");
+        try{data = JSON.parse(text);}catch(e){}
+        console.log(data);
+        if (typeof data == 'object')
+          if (game.release?.generation >= 10) text = fromUuidSync(data.uuid).link
+          else text = CONFIG[data.type].collection.instance.get(data.id).link
+        if (!text) return;
         let id = randomID();
         let value = {x: e.offsetX, y: e.offsetY-8, text, fontSize: 16};
         await character.setFlag('ffs', [`${name}`], {[`${id}`]: value});
