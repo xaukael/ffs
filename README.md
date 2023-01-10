@@ -9,6 +9,12 @@ Fonts can be added through the core font settings.
 ![Freefrom Sheet Example](https://github.com/xaukael/ffs/blob/248ea21e6173638bd022dd68055fe5554ab6f847/ffs-example.jpg)
 
 Updates
+
+1.8.1 - 1.8.5 
+  - span dialog selects current value on open
+  - span dialog sets value on render so it doesn't break with quotes now which will allow for putting html elements in there. images and custom styles yay
+  - dragging draggable elements to the sheet will add the text if the drag event does not have JSON data set
+
 1.8.0
   - font size is adjusted 1px at a time now, use shift to change rapidly
   - improved/updated help dialog text
