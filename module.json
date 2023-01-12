@@ -15,7 +15,6 @@
       },
     "scripts": ["ffs.js", "jquery-ui.min.js"],
 		"styles": ["jquery-ui.css"],
-    "dependencies": [],
     "url": "https://github.com/xaukael/ffs/",
     "manifest": "https://github.com/xaukael/ffs/raw/main/module.json",
     "download": "https://github.com/xaukael/ffs/raw/main/ffs.zip"
