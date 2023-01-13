@@ -10,6 +10,12 @@ Fonts can be added through the core font settings.
 
 Updates
 
+1.8.7
+  - template actor create now has default name in the dialog
+
+1.8.6
+  - fix module.json v10 warnings
+
 1.8.1 - 1.8.5 
   - span dialog selects current value on open
   - span dialog sets value on render so it doesn't break with quotes now which will allow for putting html elements in there. images and custom styles yay
