@@ -767,7 +767,9 @@ class ffsSettingsApp extends Dialog {
         } else {
           let folder = game.folders.find(f=>f.getFlag('ffs', 'template'));
           if (!folder) folder = await Folder.create({type:'Actor', name: 'Freeform Sheet Templates', flags: {ffs: {template: true}}})
+          Hooks.once('renderDialog', (app, html)=>{html.find('input[name="name"]').val(`${this.name} template`)});
           templateActor = await Actor.createDialog({name: `${this.name} template`, img: $(this).parent().find('img').attr('src')});
+          if (!templateActor) return;
           await templateActor.setFlag('ffs', this.name, {template:true})
           await templateActor.update({folder: folder.id})
           templateActor.freeformSheet(this.name);
