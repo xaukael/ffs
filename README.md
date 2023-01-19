@@ -10,6 +10,9 @@ Fonts can be added through the core font settings.
 
 Updates
 
+1.8.8
+  - reverted using .getRollData() for @ field button because it broke double click to edit because some systems return realative values rather than updatable ones
+
 1.8.7
   - template actor create now has default name in the dialog
 
