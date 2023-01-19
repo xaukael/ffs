@@ -45,7 +45,9 @@ Actor.prototype.freeformSheet = async function(name) {
   if (ffs[id].position) options = {...options, ...ffs[id].position}
 
   let formatText = async function(text) {
-    return await TextEditor.enrichHTML(Roll.replaceFormulaData(text, {...character.getRollData(), name: character.name}), {async:true})
+    if (game.release?.generation >= 10) return await TextEditor.enrichHTML(Roll.replaceFormulaData(text, {...character.system, ...character.getRollData(), name: character.name}), {async:true})
+    else return await TextEditor.enrichHTML(Roll.replaceFormulaData(text, {...character.data.data, ...character.getRollData(), name: character.name}), {async:true})
+    
   }
 
   let newSpan = async function(key, value){
@@ -87,6 +89,7 @@ Actor.prototype.freeformSheet = async function(name) {
       $(this).draggable('disable');
     })
     .on("wheel", function(e) {
+      if ($(this).parent().hasClass('locked')) return;
       let fontSize = parseInt($(this).css('font-size'))
       let change = 1;
       if (e.shiftKey) change = Math.max(Math.floor(fontSize/12), 1)*2;
@@ -163,18 +166,22 @@ Actor.prototype.freeformSheet = async function(name) {
             .mouseenter(function(){$(`#${key}`).css({'text-shadow': '0 0 8px green'})})
             .mouseleave(function(){$(`#${key}`).css({'text-shadow': ''})})
             
-            function buildObjectElements(rollData, el, objectPath) {
-              let property = getProperty(rollData, objectPath)
+            //function buildObjectElements(rollData, el, objectPath) {
+              //let property = getProperty(rollData, objectPath)
+            function buildObjectElements(el, objectPath) {
+              let property = getProperty(character, objectPath)
               if (property===null) return;
               for (let key of Object.keys(property)) {
-                let prop = foundry.utils.getProperty(rollData, `${objectPath}.${key}`)
+                let prop = foundry.utils.getProperty(character, `${objectPath}.${key}`)
+                //let prop = foundry.utils.getProperty(rollData, `${objectPath}.${key}`)
                 if (typeof(prop) === 'object') {
                   let objectel = $(`
                   <div class="object-path" data-path="${objectPath}.${key}" style="${objectPath=="system"?'':'margin-left: 1em;'}">
                     <a>${key} +</a>
                   </div>`)
                   el.append(objectel)
-                  buildObjectElements(rollData, objectel, `${objectPath}.${key}`)
+                  buildObjectElements(objectel, `${objectPath}.${key}`)
+                  //buildObjectElements(rollData, objectel, `${objectPath}.${key}`)
                 }
                 else
                   el.append($(
@@ -200,16 +207,17 @@ Actor.prototype.freeformSheet = async function(name) {
                 if ($(this).hasClass('hide'))
                   $(this).remove();
               })
-              let rollData = {};
-              rollData.system = character.getRollData();
-              buildObjectElements(rollData, $atOptions, `system`)//${(game.release?.generation >= 10)?'':''}
+              buildObjectElements($atOptions, `${(game.release?.generation >= 10)?'system':'data.data'}`)
+              //let rollData = {};
+              //rollData.system = character.getRollData();
+              //buildObjectElements(rollData, $atOptions, `system`)//${(game.release?.generation >= 10)?'':''}
               $atOptions.find(`.object-path, .value-path`).hide()
               $atOptions.children(`.object-path, .value-path`).show()
               $atOptions.find(`a`).click(function(){
                 $(this).parent().children('div').toggle()
               })
               $atOptions.find(`.value-path > a`).click(function(){
-                html.find('input').val('@'+$(this).parent().data().path.replace('system.',''))
+                html.find('input').val('@'+$(this).parent().data().path.replace('system.','').replace('data.data.', ''))
               })
               $('body').append($atOptions)
             })
@@ -767,7 +775,10 @@ class ffsSettingsApp extends Dialog {
         } else {
           let folder = game.folders.find(f=>f.getFlag('ffs', 'template'));
           if (!folder) folder = await Folder.create({type:'Actor', name: 'Freeform Sheet Templates', flags: {ffs: {template: true}}})
-          Hooks.once('renderDialog', (app, html)=>{html.find('input[name="name"]').val(`${this.name} template`)});
+          Hooks.once('renderDialog', (app, html)=>{
+            html.find('input[name="name"]').val(`${this.name} template`);
+            html.find('select[name="folder"]').val(folder.id);
+          });
           templateActor = await Actor.createDialog({name: `${this.name} template`, img: $(this).parent().find('img').attr('src')});
           if (!templateActor) return;
           await templateActor.setFlag('ffs', this.name, {template:true})
@@ -979,4 +990,28 @@ Hooks.on('ready', ()=>{
     },
     close:()=>{return;}
   }).render(true)
+})
+
+Hooks.once('setup', function () {
+  const { SHIFT, ALT, CONTROL } = KeyboardManager.MODIFIER_KEYS
+  game.keybindings.register('ffs', 'open-freeform-sheet', {
+    name: 'Open Default Sheet',
+    hint: "Press to open the configured default sheet for the user's assigned character.",
+    editable: [
+      {
+        key: 'KeyF',
+      },
+    ],
+    reservedModifiers: [SHIFT, ALT, CONTROL],
+    onDown: () => {  },
+    onUp: () => { 
+      let actor = game.user.character;
+      if (canvas.tokens.controlled.length == 1)
+        canvas.tokens.controlled[0]?.document?.actor;
+      if (!actor) actor = game.user.character;
+      if (!actor) return;
+      if (game.settings.get('ffs', 'defaultSheet')=="default") return;
+      actor.freeformSheet(game.settings.get('ffs', 'defaultSheet'))
+     },
+  })
 })
