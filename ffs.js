@@ -386,6 +386,10 @@ Actor.prototype.freeformSheet = async function(name) {
       for (let key of Object.keys(foundry.utils.flattenObject(updates))) 
         for (let [spanId, span] of Object.entries(character.getFlag('ffs', name)).filter(([spanId, span])=>span.text?.includes(key.replace((game.release?.generation >= 10)?'system.':'data.', '')))) 
           d.element.find(`span#${spanId}`).html(await formatText(span.text))
+    //okay: key.includes(span.text.match(/@([a-z.0-9_\-]+)/gi)[0].replace('@', ''))
+    //better: span.text.includes('@') && span.text.match(/@([a-z.0-9_\-]+)/gi)?.some(m=>key.includes(m.replace('@', ''))) 
+      //should fix SWB shortened rolldata issue
+        //returns undefined of no match is found no version check necessary
       //d.render(true);//, { width: ffs[id].width*ffs[id].scale+16, height: ffs[id].height*ffs[id].scale+46}
     })
 
