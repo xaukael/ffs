@@ -2,7 +2,6 @@
  * 
  * @param {string} name name given to the sheet in the module configuration. all text and config on the sheet will be stored under in the actor's ffs.name flag
  * 
- * Example Macro command: character.freeformSheet(this.id, 'test');
 */
 Actor.prototype.freeformSheet = async function(name) {
   let character = this;
