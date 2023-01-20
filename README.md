@@ -10,6 +10,10 @@ Fonts can be added through the core font settings.
 
 Updates
 
+1.9.0
+  - Big update to the hook for actor updates. The sheet no longer fully re-renders. If a span has an @value that matches the update, it will be updated individually.
+  - This might break updates in some systems if they are still using getRollData values. Working on a fix for this.
+
 1.8.8
   - reverted using .getRollData() for @ field button because it broke double click to edit because some systems return realative values rather than updatable ones
 
