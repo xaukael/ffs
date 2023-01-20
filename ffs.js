@@ -378,11 +378,15 @@ Actor.prototype.freeformSheet = async function(name) {
   
   if (ffs[id].hook) Hooks.off(`update${this.documentName}`, ffs[id].hook)
   ffs[id].hook = 
-    Hooks.on(`update${this.documentName}`, (doc, updates)=>{
+    Hooks.on(`update${this.documentName}`, async (doc, updates)=>{
       if (doc.id!=character.id) return;
       if (!d.element) return;
       if (foundry.utils.hasProperty(updates, "flags.ffs")) return true;
-      d.render(true);//, { width: ffs[id].width*ffs[id].scale+16, height: ffs[id].height*ffs[id].scale+46}
+      console.log(foundry.utils.flattenObject(updates))
+      for (let key of Object.keys(foundry.utils.flattenObject(updates))) 
+        for (let [spanId, span] of Object.entries(character.getFlag('ffs', name)).filter(([spanId, span])=>span.text?.includes(key.replace((game.release?.generation >= 10)?'system.':'data.', '')))) 
+          d.element.find(`span#${spanId}`).html(await formatText(span.text))
+      //d.render(true);//, { width: ffs[id].width*ffs[id].scale+16, height: ffs[id].height*ffs[id].scale+46}
     })
 
   let waitRender = 100;
@@ -1006,8 +1010,10 @@ Hooks.once('setup', function () {
     onDown: () => {  },
     onUp: () => { 
       let actor = game.user.character;
-      if (canvas.tokens.controlled.length == 1)
-        canvas.tokens.controlled[0]?.document?.actor;
+      if (canvas.tokens.controlled.length)
+        actor = canvas.tokens.controlled[0]?.document?.actor;
+
+      console.log(actor)
       if (!actor) actor = game.user.character;
       if (!actor) return;
       if (game.settings.get('ffs', 'defaultSheet')=="default") return;
