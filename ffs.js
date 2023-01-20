@@ -389,7 +389,7 @@ Actor.prototype.freeformSheet = async function(name) {
     //better: span.text.includes('@') && span.text.match(/@([a-z.0-9_\-]+)/gi)?.some(m=>key.includes(m.replace('@', ''))) 
       //should fix SWB shortened rolldata issue
         //returns undefined of no match is found no version check necessary
-        //derrived values may still be problematic. for these, I might have to split the key and check includes each part, or just format all the spans again (-386)
+        //derrived values may still be problematic. for these, I might have to split the key and check includes each part, or just format all the spans again (-385)
       //d.render(true);//, { width: ffs[id].width*ffs[id].scale+16, height: ffs[id].height*ffs[id].scale+46}
     })
 
