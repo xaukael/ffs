@@ -381,10 +381,10 @@ Actor.prototype.freeformSheet = async function(name) {
       if (doc.id!=character.id) return;
       if (!d.element) return;
       if (foundry.utils.hasProperty(updates, "flags.ffs")) return true;
-      console.log(foundry.utils.flattenObject(updates))
       for (let key of Object.keys(foundry.utils.flattenObject(updates))) 
-        for (let [spanId, span] of Object.entries(character.getFlag('ffs', name)).filter(([spanId, span])=>span.text?.includes(key.replace((game.release?.generation >= 10)?'system.':'data.', '')))) 
+        for (let [spanId, span] of Object.entries(character.getFlag('ffs', name)).filter(([spanId, span])=>key.split('.').some(i=>span.text?.includes(i)))) 
           d.element.find(`span#${spanId}`).html(await formatText(span.text))
+  //for (let [spanId, span] of Object.entries(character.getFlag('ffs', name)).filter(([spanId, span])=>span.text?.includes(key.replace((game.release?.generation >= 10)?'system.':'data.', '')))) 
     //okay: key.includes(span.text.match(/@([a-z.0-9_\-]+)/gi)[0].replace('@', ''))
     //better: span.text.includes('@') && span.text.match(/@([a-z.0-9_\-]+)/gi)?.some(m=>key.includes(m.replace('@', ''))) 
       //should fix SWB shortened rolldata issue
