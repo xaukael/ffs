@@ -101,6 +101,11 @@ Actor.prototype.freeformSheet = async function(name) {
       $('body').append($(`<span class="font-tooltip" style="position: absolute; top: ${e.clientY-10}px; left: ${e.clientX+10}px; pointer-events: none; color: white; background: #000; border: 1px solid white; padding:2px; z-index:1000;">${fontSize}px</span>`));
       updateSizeDebounce(character,name,key,fontSize,y);
     })
+    .on('copy', function(e){
+        let text = character.getFlag('ffs', name)[key].text;
+        e.originalEvent.clipboardData.setData('text/plain', text);
+        e.preventDefault();
+    })
     .draggable({
       start: function(e){
         //$(this).css('pointer-events', 'none')
@@ -137,17 +142,17 @@ Actor.prototype.freeformSheet = async function(name) {
       e.preventDefault();
       if ($(this).parent().hasClass('locked')) return;
       let text = character.getFlag('ffs', name)[key].text
-      if ((e.ctrlKey || text.includes('@')) && !e.shiftKey) {
+      if ((e.ctrlKey || text.includes('@') || text.includes('[[')) && !e.shiftKey) {
         let options = $(this).offset();
         options.left -= 190;
         options.top -= 45;
-        new Dialog({
+        let valueDialog = new Dialog({
           title: key,
-          content: `<input type="text" value="" style="width: calc(100% - 2.2em); margin-bottom:.5em;" autofocus></input>
-          <button class="at" style="width: 2em; height: 26px; float: right; line-height: 22px;">@</button>`,
+          content: `<textarea type="text" value="" style=" margin-bottom:.5em;" autofocus></textarea>
+          `,//width: calc(100% - 2.3em); <button class="at" style="width: 2em; height: 26px; float: right; line-height: 22px;">@</button>
           buttons: {confirm: {label:"Confirm", icon: '<i class="fas fa-check"></i>', callback: async (html)=>{
             confirm = true;
-            let input = html.find('input').val();
+            let input = html.find('textarea').val();
             if (input == "" || input == "NEW TEXT") {
               console.log(`removing span`, name, key)
               await character.unsetFlag('ffs', `${name}.${key}`);
@@ -159,8 +164,10 @@ Actor.prototype.freeformSheet = async function(name) {
           cancel: {label:"Cancel", icon: '<i class="fas fa-times"></i>',callback: async (html)=>{}}},
           default: 'confirm',
           render: (html)=>{
-            html.find('input').val(text);
-            html.find('input').select();
+            
+
+            html.find('textarea').val(text);
+            html.find('textarea').select();
             html.parent().parent() 
             .mouseenter(function(){$(`#${key}`).css({'text-shadow': '0 0 8px green'})})
             .mouseleave(function(){$(`#${key}`).css({'text-shadow': ''})})
@@ -190,7 +197,9 @@ Actor.prototype.freeformSheet = async function(name) {
               }
               return el;
             }
-            html.find('button.at').click(function(e){
+            //html.find('button.at')
+            let $at = $(`<a><i class="fa-solid fa-at"></i></a>`)
+            $at.click(function(e){
               $('body').find('.object-path-root').remove();
               let $atOptions = $(`<div class="object-path-root" data-path="system" 
               style="z-index: 1000; width: max-content; height: max-content; color: white; border: 1px solid black; box-shadow: 0 0 20px var(--color-shadow-dark);
@@ -216,11 +225,11 @@ Actor.prototype.freeformSheet = async function(name) {
                 $(this).parent().children('div').toggle()
               })
               $atOptions.find(`.value-path > a`).click(function(){
-                html.find('input').val('@'+$(this).parent().data().path.replace('system.','').replace('data.data.', ''))
+                html.find('textarea').val('@'+$(this).parent().data().path.replace('system.','').replace('data.data.', ''))
               })
               $('body').append($atOptions)
             })
-            
+            valueDialog.element.find('.window-header > .window-title').after($at)
           },
           close: ()=>{
             $(`#${key}`).css({'text-shadow': ''})
