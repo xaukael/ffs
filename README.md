@@ -10,6 +10,10 @@ Fonts can be added through the core font settings.
 
 Updates
 
+1.9.1-1.9.2
+  - span edit dialog uses textarea now
+  - copy event on span so it will capture stored text rather than the span html as it would sometimes do
+
 1.9.0
   - Big update to the hook for actor updates. The sheet no longer fully re-renders. If a span has an @value that matches the update, it will be updated individually.
   - This might break updates in some systems if they are still using getRollData values. Working on a fix for this.
