@@ -306,7 +306,7 @@ Actor.prototype.freeformSheet = async function(name) {
         #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span > input:focus {box-shadow: unset; } 
         #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span:focus-visible {outline-color:white; outline:unset; /*outline-style: outset; outline-offset: 6px;*/}
         #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span { white-space: nowrap; position: absolute; }
-        ${hideContextIcons?`#${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span > a > i {display:none;} `:''}
+        ${hideContextIcons?`#${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span > a.content-link > i {display:none;} `:''}
       </style>`));
       // remove dialog background
       //#${id} > section.window-content , #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs, #${id} > section.window-content > div.dialog-content > div.sizer
