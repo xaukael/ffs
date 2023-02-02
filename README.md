@@ -10,6 +10,13 @@ Fonts can be added through the core font settings.
 
 Updates
 
+1.10.0
+  - fix sheet dialog button added to header to fix or delete spans you might break experimenting with stuff
+  - better tooltips for header buttons
+  - fixed right click on text spans sometimes not focusing and bringing to edit mode
+  - span edit dialog will now resize itself if you want to make the text area larger by dragging it from the handle bottom-right 
+  - fields with editable fields will have a pointer cursor indicating they can be double clicked
+
 1.9.1-1.9.2
   - span edit dialog uses textarea now
   - copy event on span so it will capture stored text rather than the span html as it would sometimes do
