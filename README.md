@@ -6,7 +6,7 @@ Supports: inline rolls, entity links, other enriched data, @attribute replacemen
 Fonts can be added through the core font settings.
 
 
-![Freefrom Sheet Example](https://github.com/xaukael/ffs/blob/f113691b967fdd84da555bc586d99a750f023e72/ffs.jpg)
+![Freefrom Sheet Example](https://github.com/xaukael/ffs/blob/8c3265581e68d69e8936a31f25be0404b98db6e8/ffs-example.jpg)
 
 Updates
 
