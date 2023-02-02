@@ -24,12 +24,14 @@ Actor.prototype.freeformSheet = async function(name) {
     await character.setFlag('ffs', [name], {config: {scale: 1, color: "#000000", filter: ''}});
   
   // perform cleanup of empty and NEW TEXT. Should not be necessary
+  
   for (const [key, value] of Object.entries(character.getFlag('ffs', name))) {
     if (ffs.restirctedNames.includes(key)) continue;
-    if (!value.text || ($(`<span>${value.text}</span>`).text()=='' && !value.text.includes('img'))) 
+    if (value.text.includes('img')) continue;
+    if (!value.text || ($(`<span>${value.text}</span>`).text()=='') || value.text=='NEW TEXT') 
       await character.unsetFlag('ffs', `${name}.${key}`)
   }
-
+  
   ffs[id] = {...ffs[id], ...character.getFlag('ffs',`${name}.config`), ...sheet};
   //console.log(name, ffs[id])
   let options = {width: 'auto', height: 'auto', id}
@@ -46,7 +48,6 @@ Actor.prototype.freeformSheet = async function(name) {
   let formatText = async function(text) {
     if (game.release?.generation >= 10) return await TextEditor.enrichHTML(Roll.replaceFormulaData(text, {...character.system, ...character.getRollData(), name: character.name}), {async:true})
     else return await TextEditor.enrichHTML(Roll.replaceFormulaData(text, {...character.data.data, ...character.getRollData(), name: character.name}), {async:true})
-    
   }
 
   let newSpan = async function(key, value){
@@ -54,8 +55,14 @@ Actor.prototype.freeformSheet = async function(name) {
       character.setFlag('ffs', [`${name}.${key}`], {fontSize, y}) 
       $('.font-tooltip').remove();
     }, 500);
-    
-    let $span = $(`<span id="${key}" style="cursor: text; position: absolute;">${await formatText(value.text)}<span>`);
+    let cursor = 'text';
+    let match = value.text.match(/@([a-z.0-9_\-]+)/gi);
+    if (match) {
+      text = match[0];
+      text = text.replace('@', '');
+      if (!foundry.utils.hasProperty(game.system.model.Actor[character.type], value.text)) cursor = 'pointer';;
+    }
+    let $span = $(`<span id="${key}" style="cursor: ${cursor}; position: absolute;">${await formatText(value.text)}<span>`);
     $span.css({left: value.x+'px', top: value.y+'px', fontSize: value.fontSize})
     let click = {x: 0, y: 0};
     $span
@@ -79,7 +86,6 @@ Actor.prototype.freeformSheet = async function(name) {
       return $(this).blur();
     })
     .focusin(function(){
-      $(this).select();
       let selection = window.getSelection();
       let range = document.createRange();
       range.selectNodeContents(this);
@@ -102,9 +108,9 @@ Actor.prototype.freeformSheet = async function(name) {
       updateSizeDebounce(character,name,key,fontSize,y);
     })
     .on('copy', function(e){
-        let text = character.getFlag('ffs', name)[key].text;
-        e.originalEvent.clipboardData.setData('text/plain', text);
-        e.preventDefault();
+      let selection = window.getSelection();
+      e.originalEvent.clipboardData.setData('text/plain', selection.toString());
+      e.preventDefault();
     })
     .draggable({
       start: function(e){
@@ -134,7 +140,7 @@ Actor.prototype.freeformSheet = async function(name) {
         };
         await character.setFlag('ffs', [`${name}.${key}`], {x: data.position.left, y: data.position.top});
         //$(this).css('pointer-events', 'all')
-        $(this).css('cursor','text');
+        $(this).css({cursor});
       }
     })
     .contextmenu(function(e){
@@ -148,8 +154,7 @@ Actor.prototype.freeformSheet = async function(name) {
         options.top -= 45;
         let valueDialog = new Dialog({
           title: key,
-          content: `<textarea type="text" value="" style=" margin-bottom:.5em;" autofocus></textarea>
-          `,//width: calc(100% - 2.3em); <button class="at" style="width: 2em; height: 26px; float: right; line-height: 22px;">@</button>
+          content: `<textarea type="text" value="" style=" margin-bottom:.5em;" autofocus></textarea>`,//width: calc(100% - 2.3em); <button class="at" style="width: 2em; height: 26px; float: right; line-height: 22px;">@</button>
           buttons: {confirm: {label:"Confirm", icon: '<i class="fas fa-check"></i>', callback: async (html)=>{
             confirm = true;
             let input = html.find('textarea').val();
@@ -164,12 +169,11 @@ Actor.prototype.freeformSheet = async function(name) {
           cancel: {label:"Cancel", icon: '<i class="fas fa-times"></i>',callback: async (html)=>{}}},
           default: 'confirm',
           render: (html)=>{
-            
-
+            $(html[0]).append(`<style>#${valueDialog.id}{min-width:400px; height:auto !important; width:auto !important;}</style>`);
             html.find('textarea').val(text);
             html.find('textarea').select();
             html.parent().parent() 
-            .mouseenter(function(){$(`#${key}`).css({'text-shadow': '0 0 8px green'})})
+            .mouseenter(function(){$(`#${key}`).css({'text-shadow': '0 0 10px var(--color-text-light-highlight)'})})
             .mouseleave(function(){$(`#${key}`).css({'text-shadow': ''})})
             
             //function buildObjectElements(rollData, el, objectPath) {
@@ -242,7 +246,7 @@ Actor.prototype.freeformSheet = async function(name) {
       $(this).html(text)
       $(this).prop('role',"textbox")
       $(this).prop('contenteditable',"true")
-      $(this).focus()
+      $(this).trigger('focusin');//focus()
     })
     .dblclick(function(e){
       let text = character.getFlag('ffs', name)[key].text;
@@ -287,26 +291,40 @@ Actor.prototype.freeformSheet = async function(name) {
 
   let d = new Dialog({
     title: `${character.name}`,
-    content: `<div class="sizer"><div class="ffs" style="height:${ffs[id].height}px; width:${ffs[id].width}px;"></div></div>`,
+    content: `<div class="sizer" style="position:relative;"><div class="ffs" style="height:${ffs[id].height}px; width:${ffs[id].width}px;"></div></div>`,
     buttons: {},
     render: async (html)=>{
       //console.log(`${id} render`, ffs[id])
       let {width, height, left, top, background, color , scale , fontFamily, fontWeight, filter, locked, hideContextIcons} = ffs[id];
-
+/*
+ #${id} > section.window-content > div.dialog-content > div.sizer::before {
+          content: "";
+          position: absolute;
+          background-position: top -${top}px left -${left}px;
+          background-size: ${width*scale}px ${height*scale}px;
+          width: ${width}px; height: ${height}px;
+          background-image: url(${background});
+          background-repeat: no-repeat;
+          filter: ${filter};
+        }
+*/
       // apply configs
       html.css({height: 'max-content !important'});
+      html.find('style').remove();
       let $sheet = html.find('div.ffs');
-
       $sheet.before($(`<style>
         #${id} {height: auto !important; width: auto !important;}
         #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs {font-family: ${fontFamily}; font-weight: ${fontWeight}; cursor: cell; position: relative;}
+       
         #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs.locked {cursor: default;}
         #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs.locked > span {cursor: default !important;}
-        #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs * {border: unset !important; padding: 0; background: unset; background-color: unset; color: ${color} !important;} 
+        #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs * {border: unset !important; padding: 0; background: unset; background-color: unset; color: ${color};} 
         #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span > input:focus {box-shadow: unset; } 
         #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span:focus-visible {outline-color:white; outline:unset; /*outline-style: outset; outline-offset: 6px;*/}
         #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span { white-space: nowrap; position: absolute; }
-        ${hideContextIcons?`#${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span > a.content-link > i {display:none;} `:''}
+        ${hideContextIcons?`#${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span > a.content-link > i {display:none;} 
+        #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span > a.inline-roll > i {display:none;} 
+        `:''}
       </style>`));
       // remove dialog background
       //#${id} > section.window-content , #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs, #${id} > section.window-content > div.dialog-content > div.sizer
@@ -354,7 +372,6 @@ Actor.prototype.freeformSheet = async function(name) {
         let data;
         let text = e.originalEvent.dataTransfer.getData("Text");
         try{data = JSON.parse(text);}catch(e){}
-        console.log(data);
         if (typeof data == 'object')
           if (game.release?.generation >= 10) text = fromUuidSync(data.uuid).link
           else text = CONFIG[data.type].collection.instance.get(data.id).link
@@ -405,20 +422,55 @@ Actor.prototype.freeformSheet = async function(name) {
 
   let waitRender = 100;
   // wait for the element
-  if (!d._element) 
-    while (!d._element  && waitRender-- > 0) await new Promise((r) => setTimeout(r, 50));
-
+  if (!d._element)  while (!d._element  && waitRender-- > 0) await new Promise((r) => setTimeout(r, 50));
 
   // set header buttons
   let $header  = d._element.find('header');
   if (game.user.isGM)
-    $header.find('h4.window-title').after($(`<a><i class="fas fa-cog"></i></a>`).click(async function(){
+    $header.find('h4.window-title').after($(`<a data-tooltip="Configure Sheet"><i class="fas fa-cog"></i></a>`).click(async function(){
       ffs.configure(name)
     }));
   // to remember last position  
   d._element.click(function(){ ffs[id].position = d._element.offset(); })
 
-  $header.find('h4.window-title').after($(`<a><i class="fas fa-question-circle"></i></a>`).click(function(e){
+  $header.find('h4.window-title').after($(`<a data-tooltip="Fix Sheet"><i class="fas fa-tools"></i>`).click(function(e){
+    let sheet = character.getFlag('ffs', name)
+    let content = '';
+    for (const [key, value] of Object.entries(sheet)) {
+      if (ffs.restirctedNames.includes(key)) continue;
+      content += `<div class="span" data-id="${key}"><label>${key} {x:${value.x}, y:${value.y}, fontSize: ${value.fontSize}}
+      <a data-id="${key}" style="float:right; margin: 0 .2em;" class="delete">Delete</a>
+      <a data-id="${key}" style="float:right; margin: 0 .2em;" class="save">Save</a></label><textarea id="${key}"></textarea><hr></div>`
+    }
+    let d = new Dialog({
+        title:`Fix FFS - ${name} - ${character.name} `,
+        content,
+        buttons:{},
+        render:(html)=>{
+          html.find('div.span')
+            .mouseenter(function(){$(`#${this.dataset.id}`).css({'text-shadow': '0 0 10px var(--color-text-light-highlight)'})})
+            .mouseleave(function(){$(`#${this.dataset.id}`).css({'text-shadow': ''})})
+          $(html[0]).append(`<style>#${d.id}{ height:auto !important;}</style>`);
+          for (const [key, value] of Object.entries(sheet)) {
+            if (ffs.restirctedNames.includes(key)) continue;
+            html.find(`#${key}`).val(value.text)
+          }
+          html.find('a.save').click(async function(e){
+            //return console.log($(this).parent().next().val(), this.dataset.id)
+            await character.setFlag('ffs', `${name}.${this.dataset.id}.text`, $(this).parent().next().val())
+            ui.windows[$(`#ffs-${name}-${character.id}`).data().appid].render(true)
+          })
+          html.find('a.delete').click(async function(e){
+            //return console.log($(this).parent().next().val(), this.dataset.id)
+            await character.unsetFlag('ffs', `${name}.${this.dataset.id}`)
+            $(this).parent().parent().remove();
+            ui.windows[$(`#ffs-${name}-${character.id}`).data().appid].render(true)
+          })
+        }
+      },{resizable:true}).render(true)
+  }));
+
+  $header.find('h4.window-title').after($(`<a data-tooltip="Help"><i class="fas fa-question-circle"></i></a>`).click(function(e){
     new Dialog({
       title: `Freeform Sheet Help`,
       content: `<center>
@@ -448,7 +500,7 @@ Actor.prototype.freeformSheet = async function(name) {
     },{width: 600, id: `${id}-help-dialog`}).render(true);
   }).dblclick(function(e){e.stopPropagation();}));
 
-  $header.find('h4.window-title').after($(`<a><i class="fas fa-font"></i></a>`).click(function(e){
+  $header.find('h4.window-title').after($(`<a data-tooltip="Sheet Font"><i class="fas fa-font"></i></a>`).click(function(e){
     if ($(`#${id}-font-dialog`).length) return ui.windows[$(`div#${id}-font-dialog`).data().appid].bringToTop();
     new Dialog({
       title: `Font Configuration`,
@@ -460,7 +512,7 @@ Actor.prototype.freeformSheet = async function(name) {
       ${[...Array(10)].map((x,i)=>(i+1)*100).reduce((a,w)=>a+=`<option value="${w}" style="font-weight: ${w};">${w}</option>`,`<select class="fontWeight" style="width:100%">`)+`</select>`}
       <input class="fontColor" type="color" value="" style="border:unset; padding: 0; width: 100%">
       `,
-      buttons: {},
+      buttons: {confirm: {label:"", icon: '<i class="fas fa-check"></i>', callback: async (html)=>{}}},
       render: (html)=>{ 
         //html.parent().css({'background-color': 'white', 'background': 'unset', 'filter': `${ffs[id].filter}`});
         let $fontFamily = html.find('.fontFamily');
@@ -512,7 +564,7 @@ Actor.prototype.freeformSheet = async function(name) {
     d.render(true);
   }).dblclick(function(e){e.stopPropagation();}));
 
-  $header.find('h4.window-title').after($(`<a title="Sheet Filters" ><i class="fas fa-eye"></i></a>`).click( async function(e){
+  $header.find('h4.window-title').after($(`<a  data-tooltip="Sheet Filter"><i class="fas fa-eye"></i></a>`).click( async function(e){
     if ($(`#${id}-filter-dialog`).length) return ui.windows[$(`div#${id}-filter-dialog`).data().appid].bringToTop();
     e.stopPropagation();
     let confirm = false;
@@ -540,7 +592,7 @@ Actor.prototype.freeformSheet = async function(name) {
       render: (html)=>{ 
         html.find('input[type=range]').change(async function(){
           let filter = [...html.find('input[type=range]')].map(f=>f.dataset.filter+'('+f.value+'%)').join(' ');
-          $(`#${id}`).find('.ffs').css({filter})
+          $(`#${id}`).find('.ffs').css({'filter':filter})
         })
       },
       close:(html)=>{ 
@@ -553,7 +605,7 @@ Actor.prototype.freeformSheet = async function(name) {
     },{...$(this).offset(), id: `${id}-filter-dialog`}).render(true);
   }).dblclick(function(e){e.stopPropagation();}));
 
-  $header.find('h4.window-title').after($(`<a title="Zoom In" ><i class="fas fa-plus"></i></a>`).click( async function(e){
+  $header.find('h4.window-title').after($(`<a data-tooltip="Scale +10%"><i class="fas fa-plus"></i></a>`).click( async function(e){
     e.stopPropagation();
     let {scale, width, height} = ffs[id];
     scale += .1;
@@ -564,7 +616,7 @@ Actor.prototype.freeformSheet = async function(name) {
     d.render(true)
   }).dblclick(function(e){e.stopPropagation();}));
 
-  $header.find('h4.window-title').after($(`<a class="zoom" title="Reset Scale"><b>${Math.round(ffs[id].scale*100)}%</b></a>`).click( async function(e) {
+  $header.find('h4.window-title').after($(`<a class="zoom"  data-tooltip="Reset Scale"><b>${Math.round(ffs[id].scale*100)}%</b></a>`).click( async function(e) {
     let {scale, width, height} = ffs[id];
     scale = 1;
     ffs[id].scale = 1;
@@ -573,7 +625,7 @@ Actor.prototype.freeformSheet = async function(name) {
     d.render(true)
   }).dblclick(function(e){e.stopPropagation();}));
 
-  $header.find('h4.window-title').after($(`<a title="Zoom Out" ><i class="fas fa-minus"></i></a>`).click( async function(e){
+  $header.find('h4.window-title').after($(`<a data-tooltip="Scale -10%"><i class="fas fa-minus"></i></a>`).click( async function(e){
     e.stopPropagation();
     let {scale, width, height} = ffs[id];
     scale -= .1;
@@ -584,7 +636,7 @@ Actor.prototype.freeformSheet = async function(name) {
     d.render(true)
   }).dblclick(function(e){e.stopPropagation();}));
 
-  $header.find('h4.window-title').after($(`<a title="Drag Lock" ><i class="fas fa-lock${ffs[id].locked?'':'-open'}"></i></a>`).click( async function(e){
+  $header.find('h4.window-title').after($(`<a data-tooltip="Lock Sheet"><i class="fas fa-lock${ffs[id].locked?'':'-open'}"></i></a>`).click( async function(e){
     let locked = !ffs[id].locked;
     if (!locked) {
       //$(`#${id}`).find(`.ffs > span`).draggable('enable')
@@ -882,7 +934,7 @@ Hooks.once("init", async () => {
 
   game.settings.register('ffs', 'overridePlayerCharacterSheet', {
     name: `Override Player's Actor Sheets`,
-    hint: `Players will not be able to access the system character sheets.`,
+    hint: `Players will not be able to access the system character sheets and the default sheet will be shown instead.`,
     scope: "world",
     type: Boolean,
     default: false,
@@ -891,7 +943,7 @@ Hooks.once("init", async () => {
 
   game.settings.register('ffs', 'defaultSheet', {
     name: `Default Sheet`,
-    hint: `Sheet to show when `,
+    hint: `Sheet to show on hotkey or from actor sheet header button.`,
     scope: "world",
     type: String,
     choices: Object.keys(game.settings.get('ffs', 'sheets')).reduce((a,k)=>{return a= {...a, [k]:k}},{default:""}),
@@ -1027,7 +1079,6 @@ Hooks.once('setup', function () {
       if (canvas.tokens.controlled.length)
         actor = canvas.tokens.controlled[0]?.document?.actor;
 
-      console.log(actor)
       if (!actor) actor = game.user.character;
       if (!actor) return;
       if (game.settings.get('ffs', 'defaultSheet')=="default") return;
