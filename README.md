@@ -17,6 +17,7 @@ Updates
   - also allows for scaling of images so you don't have to resize before upload
   - You can now scale your image in the configuration dialog with the scroll wheel over the sizer or using the header buttons
   - fixed double click not working if the span also had a @UUID
+  - default font config added to config sheet header, but is not functional yet
 
 1.10.0
   - fix sheet dialog button added to header to fix or delete spans you might break experimenting with stuff
