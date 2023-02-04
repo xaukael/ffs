@@ -10,6 +10,9 @@ Fonts can be added through the core font settings.
 
 Updates
 
+1.11.2
+  - fixed span outlines not being removed on edit dialog close
+
 1.11.1
   - filter dialog now shows current values next to label
   - setting default color in sheet config now works
