@@ -10,6 +10,14 @@ Fonts can be added through the core font settings.
 
 Updates
 
+1.11.0
+  - span  edit dialogs and fix dialog now mark fields being edited with red outlines
+  - sheet backgrounds are now img element instaed of background
+  - this allows for filtering of just the sheet. filters no longer effect spans. You may need to fix text configuration on existing sheets if you were inverting.
+  - also allows for scaling of images so you don't have to resize before upload
+  - You can now scale your image in the configuration dialog with the scroll wheel over the sizer or using the header buttons
+  - fixed double click not working if the span also had a @UUID
+
 1.10.0
   - fix sheet dialog button added to header to fix or delete spans you might break experimenting with stuff
   - better tooltips for header buttons
