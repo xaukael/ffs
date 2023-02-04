@@ -10,6 +10,12 @@ Fonts can be added through the core font settings.
 
 Updates
 
+1.11.1
+  - filter dialog now shows current values next to label
+  - setting default color in sheet config now works
+  - added font preview text to sheet config
+  - added setting default font size to sheet config and user font config
+
 1.11.0
   - span  edit dialogs and fix dialog now mark fields being edited with red outlines
   - sheet backgrounds are now img element instaed of background
