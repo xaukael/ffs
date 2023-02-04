@@ -16,7 +16,7 @@ Actor.prototype.freeformSheet = async function(name) {
   if (!character.getFlag('ffs', name)) 
     await character.setFlag('ffs', [name], {})
   if (!character.getFlag('ffs', name)?.config)
-    await character.setFlag('ffs', [name], {config: {scale: 1, color: "#000000", filter: ''}});
+    await character.setFlag('ffs', [name], {config: {scale: 1, filter: ''}});
   
   // perform cleanup of empty and NEW TEXT. Should not be necessary
   
@@ -274,8 +274,8 @@ Actor.prototype.freeformSheet = async function(name) {
     content: `<div class="sizer" style="position:relative;"><div class="ffs" style="height:${ffs[id].height}px; width:${ffs[id].width}px;"></div></div>`,
     buttons: {},
     render: async (html)=>{
-      //console.log(`${id} render`, ffs[id])
-      let {width, height, left, top, background, color , scale , fontFamily, fontWeight, filter, locked, hideContextIcons} = ffs[id];
+      console.log(`${id} render`, ffs[id])
+      let {width, height, left, top, background, color , scale , fontFamily, fontWeight, fontSize, filter, locked, hideContextIcons} = ffs[id];
       
       // apply configs
       html.css({height: 'max-content !important'});
@@ -316,7 +316,7 @@ Actor.prototype.freeformSheet = async function(name) {
         if (locked) return;
         if (!!e?.originalEvent && e?.originalEvent?.target.nodeName != "DIV") return;
         let id = randomID();
-        let value = {x: e.offsetX, y: e.offsetY-8, text: e.ctrlKey?"@":"NEW TEXT", fontSize: 16};
+        let value = {x: e.offsetX, y: e.offsetY-8, text: e.ctrlKey?"@":"NEW TEXT", fontSize: fontSize || 16};
         await character.setFlag('ffs', [`${name}`], {[`${id}`]: value});
         let $span = await newSpan(id, value);
         $(this).append($span);
@@ -446,10 +446,11 @@ Actor.prototype.freeformSheet = async function(name) {
         content: `
         ${(game.release?.generation < 10)?
           `<input type="text" class="fontFamily" placeholder="font name" style="width:100%">`:
-          [...Object.keys(game.settings.get('core', 'fonts')), ...CONFIG.fontFamilies].reduce((a,f)=>a+=`<option value="${f}" style="font-family: ${f};">${f}</option>`,`<select class="fontFamily" style="width:100%">`) + `</select>`
+          [...Object.keys(game.settings.get('core', 'fonts')), ...CONFIG.fontFamilies].reduce((a,f)=>a+=`<option value="${f}" style="font-family: ${f};">${f}</option>`,`<select class="fontFamily" style="width:100%"  data-tooltip="Font Family">`) + `</select>`
         }
-        ${[...Array(10)].map((x,i)=>(i+1)*100).reduce((a,w)=>a+=`<option value="${w}" style="font-weight: ${w};">${w}</option>`,`<select class="fontWeight" style="width:100%">`)+`</select>`}
-        <input class="fontColor" type="color" value="" style="border:unset; padding: 0; width: 100%">
+        ${[...Array(10)].map((x,i)=>(i+1)*100).reduce((a,w)=>a+=`<option value="${w}" style="font-weight: ${w};">${w}</option>`,`<select class="fontWeight" style="width:100%" data-tooltip="Font Weight">`)+`</select>`}
+        ${[...Array(50)].map((x,i)=>(i+1)).reduce((a,w)=>a+=`<option value="${w}">${w}px</option>`,`<select class="fontSize" style="width:100%" data-tooltip="Default Font Size">`)+`</select>`}
+        <input class="fontColor" type="color" value="" style="border:unset; padding: 0; width: 100%"  data-tooltip="Font Color">
         `,
         buttons: {confirm: {label:"", icon: '<i class="fas fa-check"></i>', callback: async (html)=>{}}},
         render: (html)=>{ 
@@ -457,9 +458,11 @@ Actor.prototype.freeformSheet = async function(name) {
           let $fontFamily = html.find('.fontFamily');
           let $fontWeight = html.find('.fontWeight');
           let $fontColor = html.find('.fontColor');
+          let $fontSize = html.find('.fontSize');
           $fontFamily.val(ffs[id].fontFamily);
           $fontWeight.val(ffs[id].fontWeight);
           $fontColor.val(ffs[id].color);
+          $fontSize.val(ffs[id].fontSize||16);
           
           $fontFamily.css('font-weight', $fontWeight.val());
           $fontFamily.css('font-family', $fontFamily.val());
@@ -485,10 +488,16 @@ Actor.prototype.freeformSheet = async function(name) {
             d.render(true);
           });
 
+          $fontSize.change(async function(){
+            let fontSize = Number($(this).val());
+            ffs[id].fontSize = fontSize;
+            await character.setFlag('ffs', name, {config: {fontSize}});
+            d.render(true);
+          });
+
           $fontColor.change(async function(){
             let color = $(this).val();
             ffs[id].color = color;
-            //$(this).prevAll().css({color});
             await character.setFlag('ffs', name, {config: {color}})
             d.render(true);
           });
@@ -511,12 +520,12 @@ Actor.prototype.freeformSheet = async function(name) {
       let filterConfig = new Dialog({
         title: `Filter Configuration`,
         content: `<center>
-        grayscale<input type="range" min="0" max="100" value="${values.grayscale||0}" class="grayscale" data-filter="grayscale">
-        sepia <input type="range" min="0" max="100" value="${values.sepia||0}" class="sepia" data-filter="sepia">
-        invert<input type="range" min="0" max="100" value="${values.invert||0}" class="invert" data-filter="invert">
-        saturate<input type="range" min="0" max="500" value="${values.saturate||100}" class="saturate" data-filter="saturate">
-        contrast<input type="range" min="0" max="200" value="${values.contrast||100}" class="contrast" data-filter="contrast">
-        brightness<input type="range" min="0" max="200" value="${values.brightness||100}" class="brightness" data-filter="brightness">
+        grayscale <span>${values.grayscale||0}%</span><input type="range" min="0" max="100" value="${values.grayscale||0}" class="grayscale" data-filter="grayscale">
+        sepia <span>${values.sepia||0}%</span><input type="range" min="0" max="100" value="${values.sepia||0}" class="sepia" data-filter="sepia">
+        invert <span>${values.invert||0}%</span><input type="range" min="0" max="100" value="${values.invert||0}" class="invert" data-filter="invert">
+        saturate <span>${values.saturate||100}%</span><input type="range" min="0" max="500" value="${values.saturate||100}" class="saturate" data-filter="saturate">
+        contrast <span>${values.contrast||100}%</span><input type="range" min="0" max="200" value="${values.contrast||100}" class="contrast" data-filter="contrast">
+        brightness <span>${values.brightness||100}%</span><input type="range" min="0" max="200" value="${values.brightness||100}" class="brightness" data-filter="brightness">
         </center>`,
         buttons: {
           confirm: {label:"Confirm", icon: '<i class="fas fa-check"></i>', callback: async (html)=>{
@@ -530,6 +539,7 @@ Actor.prototype.freeformSheet = async function(name) {
         default: 'confirm',
         render: (html)=>{ 
           html.find('input[type=range]').change(async function(){
+            $(this).prev().html($(this).val()+'%')
             let filter = [...html.find('input[type=range]')].map(f=>f.dataset.filter+'('+f.value+'%)').join(' ');
             $(`#${id}`).find('.ffs > img.background').css({'filter':filter})
           })
@@ -656,7 +666,7 @@ ffs.resetActorSheet = async function(actor, name) {
 
 ffs.configure = async function(name) {
   if ($(`#${name}-ffs-configuration`).length)  return ui.windows[$(`div#${name}-ffs-configuration`).data().appid].bringToTop();
-  let config = game.settings.get('ffs', 'sheets')[name];
+  let config = {...game.settings.get('ffs', 'sheets')[name]};
   if (!config) {
       let sheets = {...game.settings.get('ffs', 'sheets'), ...{[name]: {}}}
       game.settings.set('ffs', 'sheets', sheets);
@@ -672,6 +682,12 @@ ffs.configure = async function(name) {
     title: name,//width: ${width}px; height:${height}px;
     content: `<div class="ffs" style="position: relative;  margin: 10px;">
       <img src="${config.background}" style="width: ${width*config.scale}px;">
+      <center style="position: absolute; left: 0px; top: 1px; width: 100%; height: 100%;"> 
+        <div style="padding-top: 50%; position: relative;">
+        ${'abcdefghijklm'.split('').map(a=>a.toUpperCase()+a).join(' ')+'<br>'+
+        'nopqrstuvwxyz'.split('').map(a=>a.toUpperCase()+a).join(' ')+
+        '<br> + - 1 2 3 4 5 6 7 8 9 0'}</div>
+      </center>
       <div class="sizer ui-widget-content" style="background: unset; position: absolute; left: ${config.left}px; top:${config.top}px; width:${config.width}px; height: ${config.height}px; border: 2px dashed red;"></div>
     </div><style>#${name}-ffs-configuration {height: auto !important; width: auto !important;}</style>`,
     buttons: {confirm: {label:"Confirm", icon: '<i class="fas fa-check"></i>', callback: async (html)=>{
@@ -682,9 +698,11 @@ ffs.configure = async function(name) {
       //await macro.setFlag('ffs', 'config', config)
     }},
     cancel: {label:"Cancel", icon: '<i class="fas fa-times"></i>',callback: async (html)=>{}}},
+    close: (html)=>{return},
     render: (html)=>{
+      console.log(config)
       $(html[0]).append(`<style>#${c.id}{height:auto !important; width:auto !important;}</style>`);
-      //html.css({height: 'max-content !important'});
+      html.find('center > div').css({fontFamily: config.fontFamily, color: config.color, fontSize: config.fontSize});
       html.find('div.sizer').resizable({
         stop: async function( event, ui ) {
           config = {...config, ...ui.position, ...ui.size}
@@ -738,22 +756,26 @@ ffs.configure = async function(name) {
             [...Object.keys(game.settings.get('core', 'fonts')), ...CONFIG.fontFamilies].reduce((a,f)=>a+=`<option value="${f}" style="font-family: ${f};">${f}</option>`,`<select class="fontFamily" style="width:100%">`) + `</select>`
           }
           ${[...Array(10)].map((x,i)=>(i+1)*100).reduce((a,w)=>a+=`<option value="${w}" style="font-weight: ${w};">${w}</option>`,`<select class="fontWeight" style="width:100%">`)+`</select>`}
+          ${[...Array(50)].map((x,i)=>(i+1)).reduce((a,w)=>a+=`<option value="${w}">${w}px</option>`,`<select class="fontSize" style="width:100%">`)+`</select>`}
           <input class="fontColor" type="color" value="" style="border:unset; padding: 0; width: 100%">
+          
           `,
-          buttons: {confirm: {label:"", icon: '<i class="fas fa-check"></i>', callback: async (html)=>{}}},
+          buttons: {confirm: {label:"", icon: '<i class="fas fa-check"></i>', callback: async ()=>{ 
+            html.find('center > div').css({fontFamily: config.fontFamily, color: config.color, fontSize: config.fontSize}); }}},
           render: (html)=>{ 
             let $fontFamily = html.find('.fontFamily');
             let $fontWeight = html.find('.fontWeight');
             let $fontColor = html.find('.fontColor');
+            let $fontSize = html.find('.fontSize');
             $fontFamily.val(config.fontFamily);
             $fontWeight.val(config.fontWeight);
             $fontColor.val(config.color);
+            $fontSize.val(config.fontSize||16);
             
             $fontFamily.css('font-weight', $fontWeight.val());
             $fontFamily.css('font-family', $fontFamily.val());
             $fontWeight.css('font-weight', $fontWeight.val());
             $fontWeight.css('font-family', $fontFamily.val());
-            //$fontColor.prevAll().css({'color': ffs[id].color})
             
             $fontFamily.change(async function(){
               let fontFamily =  $(this).val();
@@ -767,6 +789,11 @@ ffs.configure = async function(name) {
               config.fontWeight = fontWeight;
               $(this).css({fontWeight});
               $(this).prev().css({fontWeight});
+            });
+
+            $fontSize.change(async function(){
+              let fontSize = Number($(this).val());
+              config.fontSize = fontSize;
             });
   
             $fontColor.change(async function(){
