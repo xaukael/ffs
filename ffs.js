@@ -160,7 +160,7 @@ Actor.prototype.freeformSheet = async function(name) {
             html.find('textarea').select();
             html.parent().parent() 
             .mouseenter(function(){$(`#${key}`).css({'outline': 'outset red'})})
-            .mouseleave(function(){$(`#${key}`).css({'outline': ''})})
+            .mouseleave(function(){$(`#${key}`).css({'outline': 'unset'})})
             //function buildObjectElements(rollData, el, objectPath) {
             //let property = getProperty(rollData, objectPath)
             function buildObjectElements(el, objectPath) {
@@ -221,7 +221,7 @@ Actor.prototype.freeformSheet = async function(name) {
             valueDialog.element.find('.window-header > .window-title').after($at)
           },
           close: ()=>{
-            $(`#${key}`).css({'text-shadow': ''})
+            $(`#${key}`).css({'outline': 'unset'})
             return $('body').find('.object-path-root').remove();
           }
         },{...options, id: `${id}-${key}-dialog`}).render(true)
@@ -390,7 +390,7 @@ Actor.prototype.freeformSheet = async function(name) {
           render:(html)=>{
             html.find('div.span')
               .mouseenter(function(){$(`#${this.dataset.id}`).css({'outline': 'outset red'})})
-              .mouseleave(function(){$(`#${this.dataset.id}`).css({'outline': ''})})
+              .mouseleave(function(){$(`#${this.dataset.id}`).css({'outline': 'unset'})})
             $(html[0]).append(`<style>#${d.id}{ height:auto !important;}</style>`);
             for (const [key, value] of Object.entries(sheet)) {
               if (ffs.restirctedNames.includes(key)) continue;
