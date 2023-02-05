@@ -10,6 +10,9 @@ Fonts can be added through the core font settings.
 
 Updates
 
+1.11.3
+  - image elements in spans will size with font size now
+
 1.11.2
   - fixed span outlines not being removed on edit dialog close
 
