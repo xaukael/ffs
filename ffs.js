@@ -89,6 +89,7 @@ Actor.prototype.freeformSheet = async function(name) {
       if (fontSize==2) return console.log('font size minimum reached');
       let y = (parseInt($(this).css('top'))-change);
       $(this).css({fontSize: fontSize +"px", top: y+'px'});
+      $(this).find('img').height(fontSize)
       $('.font-tooltip').remove();
       $('body').append($(`<span class="font-tooltip" style="position: absolute; top: ${e.clientY-10}px; left: ${e.clientX+10}px; pointer-events: none; color: white; background: #000; border: 1px solid white; padding:2px; z-index:1000;">${fontSize}px</span>`));
       updateSizeDebounce(character,name,key,fontSize,y);
@@ -133,8 +134,9 @@ Actor.prototype.freeformSheet = async function(name) {
       e.stopPropagation();
       e.preventDefault();
       if ($(this).parent().hasClass('locked')) return;
-      let text = character.getFlag('ffs', name)[key].text
-      if ((e.ctrlKey || text.includes('@') || text.includes('[[')) && !e.shiftKey) {
+      let span = character.getFlag('ffs', name)[key];
+      let text = span.text;
+      if ((e.ctrlKey || text.includes('@') || text.includes('[[') || (text.includes('<') && text.includes('>'))) && !e.shiftKey) {
         let options = $(this).offset();
         options.left -= 190;
         options.top -= 45;
@@ -150,6 +152,7 @@ Actor.prototype.freeformSheet = async function(name) {
               return $(this).remove();
             }
             $(this).html(await formatText(input))
+            $(this).find('img').height(span.fontSize)
             await character.setFlag('ffs', `${name}.${key}`, {text: input});
           }},
           cancel: {label:"Cancel", icon: '<i class="fas fa-times"></i>',callback: async (html)=>{}}},
@@ -160,7 +163,7 @@ Actor.prototype.freeformSheet = async function(name) {
             html.find('textarea').select();
             html.parent().parent() 
             .mouseenter(function(){$(`#${key}`).css({'outline': 'outset red'})})
-            .mouseleave(function(){$(`#${key}`).css({'outline': 'unset'})})
+            .mouseleave(function(){$(`#${key}`).css({'outline': ''})})
             //function buildObjectElements(rollData, el, objectPath) {
             //let property = getProperty(rollData, objectPath)
             function buildObjectElements(el, objectPath) {
@@ -221,14 +224,14 @@ Actor.prototype.freeformSheet = async function(name) {
             valueDialog.element.find('.window-header > .window-title').after($at)
           },
           close: ()=>{
-            $(`#${key}`).css({'outline': 'unset'})
+            $(`#${key}`).css({'outline': ''})
             return $('body').find('.object-path-root').remove();
           }
         },{...options, id: `${id}-${key}-dialog`}).render(true)
 
         return;
       }
-      $(this).html(text)
+      $(this).html(text);
       $(this).prop('role',"textbox")
       $(this).prop('contenteditable',"true")
       $(this).trigger('focusin');//focus()
@@ -266,6 +269,7 @@ Actor.prototype.freeformSheet = async function(name) {
         }
       },{...options, id: `${id}-${key}-value-dialog`}).render(true);
     })
+    $span.find('img').height(value.fontSize)
     return $span;
   }
 
@@ -390,7 +394,7 @@ Actor.prototype.freeformSheet = async function(name) {
           render:(html)=>{
             html.find('div.span')
               .mouseenter(function(){$(`#${this.dataset.id}`).css({'outline': 'outset red'})})
-              .mouseleave(function(){$(`#${this.dataset.id}`).css({'outline': 'unset'})})
+              .mouseleave(function(){$(`#${this.dataset.id}`).css({'outline': ''})})
             $(html[0]).append(`<style>#${d.id}{ height:auto !important;}</style>`);
             for (const [key, value] of Object.entries(sheet)) {
               if (ffs.restirctedNames.includes(key)) continue;
