@@ -33,8 +33,8 @@ Actor.prototype.freeformSheet = async function(name) {
   if (ffs[id].position) options = {...options, ...ffs[id].position}
 
   let formatText = async function(text) {
-    if (game.release?.generation >= 10) return await TextEditor.enrichHTML(Roll.replaceFormulaData(text, {...character.system, ...character.getRollData(), name: character.name}), {async:true})
-    else return await TextEditor.enrichHTML(Roll.replaceFormulaData(text, {...character.data.data, ...character.getRollData(), name: character.name}), {async:true})
+    if (game.release?.generation >= 10) return await TextEditor.enrichHTML(Roll.replaceFormulaData(text, {...character.system, ...character.getRollData(), ...{flags:character.flags}, name: character.name}), {async:true})
+    else return await TextEditor.enrichHTML(Roll.replaceFormulaData(text, {...character.data.data, ...character.getRollData(), ...{flags:character.data.flags}, name: character.name}), {async:true})
   }
 
   let newSpan = async function(key, value){
@@ -162,7 +162,7 @@ Actor.prototype.freeformSheet = async function(name) {
             html.find('textarea').val(text);
             html.find('textarea').select();
             html.parent().parent() 
-            .mouseenter(function(){$(`#${key}`).css({'outline': 'outset red'})})
+            .mouseenter(function(){$(`#${key}`).css({'outline': 'red solid 2px'})})
             .mouseleave(function(){$(`#${key}`).css({'outline': ''})})
             //function buildObjectElements(rollData, el, objectPath) {
             //let property = getProperty(rollData, objectPath)
@@ -241,33 +241,62 @@ Actor.prototype.freeformSheet = async function(name) {
       let match = text.match(/@([a-z.0-9_\-]+)/gi);
       if (!match) return; 
       match.findSplice(i=>i=='@UUID')
-      console.log(match)
       text = match[0];
       text = text.replace('@', '');
-      if (!foundry.utils.hasProperty(game.system.model.Actor[character.type], text)) return;
-      let val;
-      if (game.release?.generation >= 10) val = foundry.utils.getProperty(character.system, text);
-      else val = foundry.utils.getProperty(character.data.data, text);
-      if (typeof(val)=='object') return;
-      let options = $(this).offset();
-      options.left -= 190;
-      options.top -= 45;
-      new Dialog({
-        title: `Edit ${text}`,
-        content: `<input type="${typeof(val)}" value="${val}" style="width: 100%; margin-bottom:.5em; text-align: center;" autofocus></input>`,
-        buttons: {confirm: {label:"", icon: '<i class="fas fa-check"></i>', callback: async (html)=>{
-          let input = html.find('input').val();
-          if (html.find('input')[0].type == 'number') input = Number(input)
-          if (!input && input != 0) return ui.notifications.warn('empty values can be problematic for freeform sheets');
-          await character.update({[`${(game.release?.generation >= 10)?'system':'data'}.${text}`]: input});
-        }}},
-        default: 'confirm',
-        render: (html) =>{
-          html.find('input').select();
-        },
-        close: ()=>{ return
-        }
-      },{...options, id: `${id}-${key}-value-dialog`}).render(true);
+      if (foundry.utils.hasProperty(game.system.model.Actor[character.type], text)) {
+        let val;
+        if (game.release?.generation >= 10) val = foundry.utils.getProperty(character.system, text);
+        else val = foundry.utils.getProperty(character.data.data, text);
+        if (typeof(val)=='object') return;
+        let options = $(this).offset();
+        options.left -= 190;
+        options.top -= 45;
+        new Dialog({
+          title: `Edit ${text}`,
+          content: `<input type="${typeof(val)}" value="${val}" style="width: 100%; margin-bottom:.5em; text-align: center;" autofocus></input>`,
+          buttons: {confirm: {label:"", icon: '<i class="fas fa-check"></i>', callback: async (html)=>{
+            let input = html.find('input').val();
+            if (html.find('input')[0].type == 'number') input = Number(input)
+            if (!input && input != 0) return ui.notifications.warn('empty values can be problematic for freeform sheets');
+            await character.update({[`${(game.release?.generation >= 10)?'system':'data'}.${text}`]: input});
+          }}},
+          default: 'confirm',
+          render: (html) =>{
+            html.find('input').select();
+          },
+          close: ()=>{ return
+          }
+        },{...options, id: `${id}-${key}-value-dialog`}).render(true);
+      }
+      if (foundry.utils.hasProperty({flags:character.flags}, text)) {
+        let flag = text.split('.');
+        flag.shift();
+        let scope = flag.shift();
+        let prop = flag.join('.');
+        //return console.log(scope, prop)
+        let val = character.getFlag(scope, prop);
+        if (typeof(val)=='object') return;
+        let options = $(this).offset();
+        options.left -= 190;
+        options.top -= 45;
+        new Dialog({
+          title: `Edit ${text}`,
+          content: `<input type="${typeof(val)}" value="${val}" style="width: 100%; margin-bottom:.5em; text-align: center;" autofocus></input>`,
+          buttons: {confirm: {label:"", icon: '<i class="fas fa-check"></i>', callback: async (html)=>{
+            let input = html.find('input').val();
+            if (html.find('input')[0].type == 'number' || !isNaN(input)) input = Number(input)
+            if (!input && input != 0) return ui.notifications.warn('empty values can be problematic for freeform sheets');
+            await character.setFlag(scope, prop, input);
+          }}},
+          default: 'confirm',
+          render: (html) =>{
+            html.find('input').select();
+          },
+          close: ()=>{ return
+          }
+        },{...options, id: `${id}-${key}-value-dialog`}).render(true);
+      }
+      
     })
     $span.find('img').height(value.fontSize)
     return $span;
@@ -278,7 +307,7 @@ Actor.prototype.freeformSheet = async function(name) {
     content: `<div class="sizer" style="position:relative;"><div class="ffs" style="height:${ffs[id].height}px; width:${ffs[id].width}px;"></div></div>`,
     buttons: {},
     render: async (html)=>{
-      console.log(`${id} render`, ffs[id])
+      //console.log(`${id} render`, ffs[id])
       let {width, height, left, top, background, color , scale , fontFamily, fontWeight, fontSize, filter, locked, hideContextIcons} = ffs[id];
       
       // apply configs
@@ -287,14 +316,15 @@ Actor.prototype.freeformSheet = async function(name) {
       let $sheet = html.find('div.ffs');
       $sheet.before($(`<style>
         #${id} {height: auto !important; width: auto !important;}
-        #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs {font-family: ${fontFamily}; font-weight: ${fontWeight}; cursor: cell; position: relative; overflow-x: hidden; overflow-y: hidden;}
+        #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs {font-family: ${fontFamily}; font-weight: ${fontWeight}; 
+          cursor: cell; position: relative; overflow-y: hidden; overflow-x: hidden; overflow-wrap: break-word;}
         #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs.locked {cursor: default;}
         #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs.locked > span {cursor: default !important;}
         #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > img.background {pointer-events: none; position: absolute; max-width: unset; }
         #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs * {border: unset !important; padding: 0; background: unset; background-color: unset; color: ${color};} 
         #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span > input:focus {box-shadow: unset; } 
-        #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span:focus-visible {outline-color:white; outline:unset; /*outline-style: outset; outline-offset: 6px;*/}
-        #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span { white-space: nowrap; position: absolute; }
+        #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span:focus-visible {outline-color:white; outline: ${color} solid 2px; outline-offset: 3px;}
+        #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span { white-space: fwrap; position: absolute; }
         ${hideContextIcons?`#${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span > a.content-link > i {display:none;} 
         #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span > a.inline-roll > i {display:none;} `:''}
       </style>`));
@@ -393,7 +423,7 @@ Actor.prototype.freeformSheet = async function(name) {
           buttons:{},
           render:(html)=>{
             html.find('div.span')
-              .mouseenter(function(){$(`#${this.dataset.id}`).css({'outline': 'outset red'})})
+              .mouseenter(function(){$(`#${this.dataset.id}`).css({'outline': 'red solid 2px'})})
               .mouseleave(function(){$(`#${this.dataset.id}`).css({'outline': ''})})
             $(html[0]).append(`<style>#${d.id}{ height:auto !important;}</style>`);
             for (const [key, value] of Object.entries(sheet)) {
