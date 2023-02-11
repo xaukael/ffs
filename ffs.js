@@ -5,6 +5,8 @@ Actor.prototype.freeformSheet = async function(name) {
   let character = this;
   name = name.slugify().replace(/[^a-zA-Z0-9\- ]/g, '');
   
+  console.log(`Rendering Freeform Sheet ${name} for ${character.name}`)
+
   if (ffs.restirctedNames.includes(name)) return console.error("restricted name", name);
   let sheet = game.settings.get('ffs', 'sheets')[name];
   if (!sheet) return console.error(`sheet config for ${name} not found in game settings`);;
@@ -39,6 +41,7 @@ Actor.prototype.freeformSheet = async function(name) {
 
   let newSpan = async function(key, value){
     let updateSizeDebounce = foundry.utils.debounce((character,name,key,fontSize,y)=> {
+      console.log( `${name}.${key}`, {fontSize, y})
       character.setFlag('ffs', [`${name}.${key}`], {fontSize, y}) 
       $('.font-tooltip').remove();
     }, 500);
@@ -243,6 +246,7 @@ Actor.prototype.freeformSheet = async function(name) {
       match.findSplice(i=>i=='@UUID')
       text = match[0];
       text = text.replace('@', '');
+      console.log(text)
       if (foundry.utils.hasProperty(game.system.model.Actor[character.type], text)) {
         let val;
         if (game.release?.generation >= 10) val = foundry.utils.getProperty(character.system, text);
@@ -268,6 +272,7 @@ Actor.prototype.freeformSheet = async function(name) {
           }
         },{...options, id: `${id}-${key}-value-dialog`}).render(true);
       }
+
       if (foundry.utils.hasProperty({flags:character.flags}, text)) {
         let flag = text.split('.');
         flag.shift();
@@ -307,7 +312,7 @@ Actor.prototype.freeformSheet = async function(name) {
     content: `<div class="sizer" style="position:relative;"><div class="ffs" style="height:${ffs[id].height}px; width:${ffs[id].width}px;"></div></div>`,
     buttons: {},
     render: async (html)=>{
-      //console.log(`${id} render`, ffs[id])
+      console.log(`${id} render`, ffs[id])
       let {width, height, left, top, background, color , scale , fontFamily, fontWeight, fontSize, filter, locked, hideContextIcons} = ffs[id];
       
       // apply configs
@@ -393,7 +398,7 @@ Actor.prototype.freeformSheet = async function(name) {
       if (foundry.utils.hasProperty(updates, "flags.ffs")) return true;
       for (let key of Object.keys(foundry.utils.flattenObject(updates))) 
         for (let [spanId, span] of Object.entries(character.getFlag('ffs', name)).filter(([spanId, span])=>key.split('.').some(i=>span.text?.includes(i)))) 
-          d.element.find(`span#${spanId}`).html(await formatText(span.text))
+          d.element.find(`span#${spanId}`).html(await formatText(span.text)).find('img').height(span.fontSize)
     })
 
   //let waitRender = 100; if (!d._element)  while (!d._element  && waitRender-- > 0) await new Promise((r) => setTimeout(r, 50));
