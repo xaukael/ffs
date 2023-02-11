@@ -16,6 +16,6 @@
     "scripts": ["ffs.js", "jquery-ui.min.js"],
 		"styles": ["jquery-ui.css"],
     "url": "https://github.com/xaukael/ffs/",
-    "manifest": "https://raw.githubusercontent.com/xaukael/ffs/main/module.json",
+    "manifest": "https://github.com/xaukael/ffs/raw/main/module.json",
     "download": "https://github.com/xaukael/ffs/raw/main/ffs.zip"
 }
