@@ -30,7 +30,7 @@ Actor.prototype.freeformSheet = async function(name) {
   }
   
   ffs[id] = {...ffs[id], ...sheet, ...character.getFlag('ffs',`${name}.config`)};
-  //console.log(name, ffs[id])
+  
   let options = {width: 'auto', height: 'auto', id}
   if (ffs[id].position) options = {...options, ...ffs[id].position}
 
@@ -41,7 +41,7 @@ Actor.prototype.freeformSheet = async function(name) {
 
   let newSpan = async function(key, value){
     let updateSizeDebounce = foundry.utils.debounce((character,name,key,fontSize,y)=> {
-      console.log( `${name}.${key}`, {fontSize, y})
+      
       character.setFlag('ffs', [`${name}.${key}`], {fontSize, y}) 
       $('.font-tooltip').remove();
     }, 500);
@@ -246,7 +246,6 @@ Actor.prototype.freeformSheet = async function(name) {
       match.findSplice(i=>i=='@UUID')
       text = match[0];
       text = text.replace('@', '');
-      console.log(text)
       if (foundry.utils.hasProperty(game.system.model.Actor[character.type], text)) {
         let val;
         if (game.release?.generation >= 10) val = foundry.utils.getProperty(character.system, text);
@@ -278,7 +277,6 @@ Actor.prototype.freeformSheet = async function(name) {
         flag.shift();
         let scope = flag.shift();
         let prop = flag.join('.');
-        //return console.log(scope, prop)
         let val = character.getFlag(scope, prop);
         if (typeof(val)=='object') return;
         let options = $(this).offset();
@@ -312,7 +310,7 @@ Actor.prototype.freeformSheet = async function(name) {
     content: `<div class="sizer" style="position:relative;"><div class="ffs" style="height:${ffs[id].height}px; width:${ffs[id].width}px;"></div></div>`,
     buttons: {},
     render: async (html)=>{
-      console.log(`${id} render`, ffs[id])
+      //console.log(`${id} render`, ffs[id])
       let {width, height, left, top, background, color , scale , fontFamily, fontWeight, fontSize, filter, locked, hideContextIcons} = ffs[id];
       
       // apply configs
@@ -710,7 +708,7 @@ ffs.configure = async function(name) {
       let sheets = {...game.settings.get('ffs', 'sheets'), ...{[name]: {}}}
       game.settings.set('ffs', 'sheets', sheets);
   }
-  console.log(config)
+ 
   if (!config.hasOwnProperty('scale')) config.scale = 1;
 
   let i = await loadTexture(config.background);
@@ -739,18 +737,15 @@ ffs.configure = async function(name) {
     cancel: {label:"Cancel", icon: '<i class="fas fa-times"></i>',callback: async (html)=>{}}},
     close: (html)=>{return},
     render: (html)=>{
-      console.log(config)
       $(html[0]).append(`<style>#${c.id}{height:auto !important; width:auto !important;}</style>`);
       html.find('center > div').css({fontFamily: config.fontFamily, color: config.color, fontSize: config.fontSize});
       html.find('div.sizer').resizable({
         stop: async function( event, ui ) {
           config = {...config, ...ui.position, ...ui.size}
-          console.log(config)
         }
       }).draggable({
         stop: async function( event, ui ) {
           config = {...config, ...ui.position}
-          console.log(config)
         }
       })
       .on('wheel', function(e){
@@ -759,7 +754,6 @@ ffs.configure = async function(name) {
         html.find('.sizer').css({width: i.orig.width*config.scale+'px', height: i.orig.height*config.scale+'px', left:'1px', top:'1px'});
         let $sizer = html.find('.sizer')
         config = {...config, ...$sizer.position(), ...{width: $sizer.width(), height: $sizer.height()}}
-        console.log(config)
       });
       let $header  = c._element.find('header');
 
