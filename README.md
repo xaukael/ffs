@@ -10,6 +10,10 @@ Fonts can be added through the core font settings.
 
 Updates
 
+1.11.6
+
+  - All @ fields get refreshed when an actor updates. This should refresh any derrived fields.
+
 1.11.5
   - Fixed images not getting their size from fontSize if they happened to be caught in a refresh from updateActor hook
 
