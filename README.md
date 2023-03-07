@@ -10,8 +10,10 @@ Fonts can be added through the core font settings.
 
 Updates
 
-1.11.6
+1.11.7
+  - Removed test code that broke all actor updates in the last update
 
+1.11.6
   - All @ fields get refreshed when an actor updates. This should refresh any derrived fields.
 
 1.11.5
