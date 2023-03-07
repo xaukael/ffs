@@ -394,7 +394,7 @@ Actor.prototype.freeformSheet = async function(name) {
       if (doc.id!=character.id) return;
       if (!d.element) return;
       if (foundry.utils.hasProperty(updates, "flags.ffs")) return true;
-      for (let [spanId, span] of Object.entries(game.user.character.getFlag('ffs', 'colossus-gods')).filter(([id, span])=>span.text?.includes('@')))
+      for (let [spanId, span] of Object.entries(game.user.character.getFlag('ffs', name)).filter(([id, span])=>span.text?.includes('@')))
         d.element.find(`span#${spanId}`).html(await formatText(span.text)).find('img').height(span.fontSize);
     })
 
