@@ -409,7 +409,8 @@ Actor.prototype.freeformSheet = async function(name) {
         ffs.configure(name)
       }));
     // to remember last position  
-    html.click(function(){ ffs[id].position = d._element.offset(); })
+    html.click(function(){if (app._element) ffs[id].position = app._element.offset(); })
+
 
     $header.find('h4.window-title').after($(`<a class="ffs-tool" data-tooltip="Fix Sheet"><i class="fas fa-tools"></i>`).click(function(e){
       let sheet = character.getFlag('ffs', name)
