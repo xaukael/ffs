@@ -391,12 +391,13 @@ Actor.prototype.freeformSheet = async function(name) {
   if (ffs[id].hook) Hooks.off(`update${this.documentName}`, ffs[id].hook)
   ffs[id].hook = 
     Hooks.on(`update${this.documentName}`, async (doc, updates)=>{
+      console.log(doc.id, character.id, updates, !d.element);
       if (doc.id!=character.id) return;
       if (!d.element) return;
       if (foundry.utils.hasProperty(updates, "flags.ffs")) return true;
-      for (let [spanId, span] of Object.entries(game.user.character.getFlag('ffs', name)).filter(([id, span])=>span.text?.includes('@')))
+      for (let [spanId, span] of Object.entries(character.getFlag('ffs', name)).filter(([id, span])=>span.text?.includes('@')))
         d.element.find(`span#${spanId}`).html(await formatText(span.text)).find('img').height(span.fontSize);
-    })
+    });
 
   //let waitRender = 100; if (!d._element)  while (!d._element  && waitRender-- > 0) await new Promise((r) => setTimeout(r, 50));
 
