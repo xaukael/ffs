@@ -1,4 +1,7 @@
 # Freeform Sheets
+
+Breif tutorial: https://youtu.be/XLnb0dkMItc
+
 Create configurable sheets for your character from image files.
 
 Supports: inline rolls, entity links, other enriched data, @attribute replacement for core actor fields as well as roll data.
