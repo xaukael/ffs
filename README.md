@@ -10,6 +10,9 @@ Fonts can be added through the core font settings.
 
 Updates
 
+1.12.0
+  - All sheet updates from other users will re-render the sheet for other users viewing the sheet.
+  
 1.11.7
   - Removed test code that broke all actor updates in the last update
 
