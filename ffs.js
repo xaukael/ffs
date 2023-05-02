@@ -5,7 +5,7 @@ Actor.prototype.freeformSheet = async function(name) {
   let character = this;
   name = name.slugify().replace(/[^a-zA-Z0-9\- ]/g, '');
   
-  console.log(`Rendering Freeform Sheet ${name} for ${character.name}`)
+  //console.log(`Rendering Freeform Sheet ${name} for ${character.name}`)
 
   if (ffs.restirctedNames.includes(name)) return console.error("restricted name", name);
   let sheet = game.settings.get('ffs', 'sheets')[name];
@@ -18,7 +18,8 @@ Actor.prototype.freeformSheet = async function(name) {
   if (!character.getFlag('ffs', name)) 
     await character.setFlag('ffs', [name], {})
   if (!character.getFlag('ffs', name)?.config)
-    await character.setFlag('ffs', [name], {config: {scale: 1, filter: ''}});
+    await character.setFlag('ffs', [name], {config: {scale: 1, filter: '', showContentImages: false, showContentIcons: false, showContentText: true}});
+
   
   // perform cleanup of empty and NEW TEXT. Should not be necessary
   
@@ -30,6 +31,10 @@ Actor.prototype.freeformSheet = async function(name) {
   }
   
   ffs[id] = {...ffs[id], ...sheet, ...character.getFlag('ffs',`${name}.config`)};
+
+  if (!ffs[id].hasOwnProperty('showContentImages')) ffs[id].showContentImages = false;
+  if (!ffs[id].hasOwnProperty('showContentIcons')) ffs[id].showContentIcons = false;
+  if (!ffs[id].hasOwnProperty('showContentText')) ffs[id].showContentIcons = true;
   
   let options = {width: 'auto', height: 'auto', id}
   if (ffs[id].position) options = {...options, ...ffs[id].position}
@@ -50,7 +55,7 @@ Actor.prototype.freeformSheet = async function(name) {
     if (match) {
       text = match[0];
       text = text.replace('@', '');
-      if (!foundry.utils.hasProperty(game.system.model.Actor[character.type], value.text)) cursor = 'pointer';;
+      if (!foundry.utils.hasProperty(game.system.model.Actor[character.type], value.text)) cursor = 'pointer';
     }
     let $span = $(`<span id="${key}" style="cursor: ${cursor}; position: absolute;">${await formatText(value.text)}<span>`);
     $span.css({left: value.x+'px', top: value.y+'px', fontSize: value.fontSize})
@@ -155,6 +160,14 @@ Actor.prototype.freeformSheet = async function(name) {
               return $(this).remove();
             }
             $(this).html(await formatText(input))
+            $(this).find('a.content-link').each(function(e){
+              let content = fromUuidSync(this.dataset.uuid);
+              let img = content?.img;
+              if (!img) return true;
+              if (!(ffs[id].showContentText)) $(this).html('');
+              if (ffs[id].showContentImages) $(this).prepend($(`<img src="${img}">`));
+              this.dataset.tooltip = content.name;
+            });
             $(this).find('img').height(span.fontSize)
             await character.setFlag('ffs', `${name}.${key}`, {text: input});
           }},
@@ -301,6 +314,15 @@ Actor.prototype.freeformSheet = async function(name) {
       }
       
     })
+    $span.find('a.content-link').each(function(e){
+      let content = fromUuidSync(this.dataset.uuid);
+      let img = content?.img;
+      if (!img) return true;
+      if (!(ffs[id].showContentText)) $(this).html('');
+      if (ffs[id].showContentImages) $(this).prepend($(`<img src="${img}">`));
+      //console.log($(this), content.name)
+      this.dataset.tooltip = content.name;
+    });
     $span.find('img').height(value.fontSize)
     return $span;
   }
@@ -311,7 +333,7 @@ Actor.prototype.freeformSheet = async function(name) {
     buttons: {},
     render: async (html)=>{
       //console.log(`${id} render`, ffs[id])
-      let {width, height, left, top, background, color , scale , fontFamily, fontWeight, fontSize, filter, locked, hideContextIcons} = ffs[id];
+      let {width, height, left, top, background, color , scale , fontFamily, fontWeight, fontSize, filter, locked, showContentIcons} = ffs[id];
       
       // apply configs
       html.css({height: 'max-content !important'});
@@ -328,13 +350,13 @@ Actor.prototype.freeformSheet = async function(name) {
         #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span > input:focus {box-shadow: unset; } 
         #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span:focus-visible {outline-color:white; outline: ${color} solid 2px; outline-offset: 3px;}
         #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span { white-space: fwrap; position: absolute; }
-        ${hideContextIcons?`#${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span > a.content-link > i {display:none;} 
+        ${!showContentIcons?`#${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span > a.content-link > i {display:none;} 
         #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span > a.inline-roll > i {display:none;} `:''}
       </style>`));
       html.parent().css({background:'unset'});
       let bgScale = game.settings.get('ffs', 'sheets')[name].scale || 1;
-      $sheet.parent().css({height: `${height*scale*bgScale}px`, width: `${width*scale*bgScale}px`});
-      $sheet.css({'transform-origin': 'top left', 'transform': `scale(${scale*bgScale})`});
+      $sheet.parent().css({height: `${height*scale}px`, width: `${width*scale}px`});
+      $sheet.css({'transform-origin': 'top left', 'transform': `scale(${scale})`});
       
       let i = await loadTexture(background);
       $sheet.append($(`<img src="${background}" class="background" style="top:-${top}px; left: -${left}px; width:${i.orig.width*bgScale}px; height:${i.orig.height*bgScale}px; filter: ${filter};">`));
@@ -391,7 +413,7 @@ Actor.prototype.freeformSheet = async function(name) {
   if (ffs[id].hook) Hooks.off(`update${this.documentName}`, ffs[id].hook)
   ffs[id].hook = 
     Hooks.on(`update${this.documentName}`, async (doc, updates, context, userId)=>{
-      console.log(doc.id, character.id, updates, !d.element, context, userId);
+      //console.log(doc.id, character.id, updates, !d.element, context, userId);
       if (doc.id!=character.id) return;
       if (!d.element) return;
       if (foundry.utils.hasProperty(updates, "flags.ffs") && game.user.id == userId) return true;
@@ -543,14 +565,57 @@ Actor.prototype.freeformSheet = async function(name) {
         },
         close:(html)=>{ return }
       },{...$(this).offset(), width: 150, id: `${id}-font-dialog`}).render(true);
-    })
+    }));
+
+    $header.find('h4.window-title').after($(`<a class="ffs-tool" data-tooltip="Sheet Links"><i class="fas fa-link"></i>`).click(function(e){   
+      if ($(`#${id}-links-dialog`).length) return ui.windows[$(`div#${id}-links-dialog`).data().appid].bringToTop();
+      new Dialog({
+        title: `Link Configuration`,
+        content: `
+        
+        <input type="checkbox" class="image" name="image" value="Car">
+        <label for="image"> Images</label><br>
+        <input type="checkbox" class="icon" name="icon" value="Bike">
+        <label for="icon"> Icons</label><br>
+        <input type="checkbox" class="text" name="text" value="Boat">
+        <label for="text"> Text</label><br>
+        `,
+        buttons: {},//confirm: {label:"", icon: '<i class="fas fa-check"></i>', callback: async (html)=>{}}},
+        render: (html)=>{ 
+          
+          html.find('input.icon').change(async function(){
+            let showContentIcons = $(this).is(':checked');
+            ffs[id].showContentIcons = showContentIcons;
+            await character.setFlag('ffs', name, {config: {showContentIcons}});
+            d.render(true);
+          }).prop('checked', ffs[id].showContentIcons);
+
+          html.find('input.image').change(async function(){
+            let showContentImages = $(this).is(':checked');
+            ffs[id].showContentImages = showContentImages;
+            await character.setFlag('ffs', name, {config: {showContentImages}});
+            d.render(true);
+          }).prop('checked', ffs[id].showContentImages);
+
+          html.find('input.text').change(async function(){
+            let showContentText = $(this).is(':checked');
+            ffs[id].showContentText = showContentText;
+            await character.setFlag('ffs', name, {config: {showContentText}});
+            d.render(true);
+          }).prop('checked', ffs[id].showContentText);
+        },
+        close:(html)=>{ return }
+      },{...$(this).offset(), width: 150, id: `${id}-links-dialog`}).render(true);
+    }).dblclick(function(e){e.stopPropagation();}));
+    /*
     .contextmenu(async function(){
       let hideContextIcons = !ffs[id].hideContextIcons;
       ffs[id].hideContextIcons = hideContextIcons;
       await character.setFlag('ffs', name, {config: {hideContextIcons}});
       d.render(true);
-    }).dblclick(function(e){e.stopPropagation();}));
+    })*/
 
+    
     $header.find('h4.window-title').after($(`<a class="ffs-tool" data-tooltip="Sheet Filter"><i class="fas fa-eye"></i></a>`).click( async function(e){
       if ($(`#${id}-filter-dialog`).length) return ui.windows[$(`div#${id}-filter-dialog`).data().appid].bringToTop();
       e.stopPropagation();
@@ -712,7 +777,6 @@ ffs.configure = async function(name) {
   }
  
   if (!config.hasOwnProperty('scale')) config.scale = 1;
-
   let i = await loadTexture(config.background);
   let width = i.orig.width;
   let height = i.orig.height;
@@ -749,7 +813,8 @@ ffs.configure = async function(name) {
         stop: async function( event, ui ) {
           config = {...config, ...ui.position}
         }
-      })
+      });
+      /*
       .on('wheel', function(e){
         config.scale = (e.originalEvent.wheelDelta<0)?config.scale+.05:config.scale-.05;
         html.find('img').css({width: i.orig.width*config.scale+'px'});
@@ -757,6 +822,7 @@ ffs.configure = async function(name) {
         let $sizer = html.find('.sizer')
         config = {...config, ...$sizer.position(), ...{width: $sizer.width(), height: $sizer.height()}}
       });
+      */
       let $header  = c._element.find('header');
 
       $header.find('h4.window-title').after($(`<a title="Change Image" ><i class="fas fa-image"></i></a>`).click(async function(){
@@ -844,18 +910,21 @@ ffs.configure = async function(name) {
         config.scale += .1;
         html.find('img').css({width: i.orig.width*config.scale+'px'});
         html.find('.sizer').css({width: i.orig.width*config.scale+'px', height: i.orig.height*config.scale+'px', left:'1px', top:'1px'});
+        config = {...config, ...html.find('.sizer').position(), height: html.find('.sizer').height(), width: html.find('.sizer').width()};
       }).dblclick(function(e){e.stopPropagation();}));
   
       $header.find('h4.window-title').after($(`<a class="zoom"  data-tooltip="Reset Scale"><b>Reset</b></a>`).click( async function(e) {
         config.scale = 1;
         html.find('img').css({width: i.orig.width*config.scale+'px'});
         html.find('.sizer').css({width: i.orig.width*config.scale+'px', height: i.orig.height*config.scale+'px', left:'1px', top:'1px'});
+        config = {...config, ...html.find('.sizer').position(), height: html.find('.sizer').height(), width: html.find('.sizer').width()};
       }).dblclick(function(e){e.stopPropagation();}));
   
       $header.find('h4.window-title').after($(`<a data-tooltip="Scale -10%"><i class="fas fa-minus"></i></a>`).click( async function(e){
         config.scale -= .1;
         html.find('img').css({width: i.orig.width*config.scale+'px'});
         html.find('.sizer').css({width: i.orig.width*config.scale+'px', height: i.orig.height*config.scale+'px', left:'1px', top:'1px'});
+        config = {...config, ...html.find('.sizer').position(), height: html.find('.sizer').height(), width: html.find('.sizer').width()};
       }).dblclick(function(e){e.stopPropagation();}));
       
       
