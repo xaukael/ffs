@@ -8,8 +8,7 @@ Supports: inline rolls, entity links, other enriched data, @attribute replacemen
 
 Fonts can be added through the core font settings.
 
-
-![Freefrom Sheet Example](https://github.com/xaukael/ffs/blob/8c3265581e68d69e8936a31f25be0404b98db6e8/ffs-example.jpg)
+![Freefrom Sheet Example](https://user-images.githubusercontent.com/37848032/235782729-8c172940-526c-4103-8dee-765351e40510.png)
 
 Updates
 
