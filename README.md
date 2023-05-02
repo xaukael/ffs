@@ -14,6 +14,7 @@ Updates
 
 1.13.0
   - new configuration allowing for showing images for content links along with the option to hide the text
+  - fixed scaling of the sheet in configuration so it does not double scale anymore
 
 1.12.0
   - All sheet updates from other users will re-render the sheet for other users viewing the sheet.
