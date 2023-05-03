@@ -12,6 +12,9 @@ Fonts can be added through the core font settings.
 
 Updates
 
+1.13.1
+  - fix typos and logs from recent changes
+
 1.13.0
   - new configuration allowing for showing images for content links along with the option to hide the text
   - fixed scaling of the sheet in configuration so it does not double scale anymore
