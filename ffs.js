@@ -22,19 +22,19 @@ Actor.prototype.freeformSheet = async function(name) {
 
   
   // perform cleanup of empty and NEW TEXT. Should not be necessary
-  
+  /*
   for (const [key, value] of Object.entries(character.getFlag('ffs', name))) {
     if (ffs.restirctedNames.includes(key)) continue;
     if (value.text.includes('img')) continue;
     if (!value.text || ($(`<span>${value.text}</span>`).text()=='') || value.text=='NEW TEXT') 
       await character.unsetFlag('ffs', `${name}.${key}`)
   }
-  
+  */
   ffs[id] = {...ffs[id], ...sheet, ...character.getFlag('ffs',`${name}.config`)};
 
   if (!ffs[id].hasOwnProperty('showContentImages')) ffs[id].showContentImages = false;
   if (!ffs[id].hasOwnProperty('showContentIcons')) ffs[id].showContentIcons = false;
-  if (!ffs[id].hasOwnProperty('showContentText')) ffs[id].showContentIcons = true;
+  if (!ffs[id].hasOwnProperty('showContentText')) ffs[id].showContentText = true;
   
   let options = {width: 'auto', height: 'auto', id}
   if (ffs[id].position) options = {...options, ...ffs[id].position}
@@ -46,10 +46,10 @@ Actor.prototype.freeformSheet = async function(name) {
 
   let newSpan = async function(key, value){
     let updateSizeDebounce = foundry.utils.debounce((character,name,key,fontSize,y)=> {
-      
       character.setFlag('ffs', [`${name}.${key}`], {fontSize, y}) 
       $('.font-tooltip').remove();
     }, 500);
+    if (value.text==undefined) return await character.unsetFlag('ffs', `${name}.${key}`);
     let cursor = 'text';
     let match = value.text.match(/@([a-z.0-9_\-]+)/gi);
     if (match) {
