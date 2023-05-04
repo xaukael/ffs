@@ -12,6 +12,9 @@ Fonts can be added through the core font settings.
 
 Updates
 
+1.14.0
+  - added workaround to get editable fields working for simple world building system
+
 1.13.4
   - fixed css bugs
   - added right margin to content link images
