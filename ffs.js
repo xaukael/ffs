@@ -56,6 +56,7 @@ Actor.prototype.freeformSheet = async function(name) {
       text = match[0];
       text = text.replace('@', '');
       if (!foundry.utils.hasProperty(game.system.model.Actor[character.type], value.text)) cursor = 'pointer';
+      if (game.system.id=='worldbuilding' && foundry.utils.hasProperty(character.getRollData(), 'attributes.attr1.value')) cursor = 'pointer';
     }
     let $span = $(`<span id="${key}" style="cursor: ${cursor}; position: absolute;">${await formatText(value.text)}<span>`);
     $span.css({left: value.x+'px', top: value.y+'px', fontSize: value.fontSize})
@@ -259,7 +260,8 @@ Actor.prototype.freeformSheet = async function(name) {
       match.findSplice(i=>i=='@UUID')
       text = match[0];
       text = text.replace('@', '');
-      if (foundry.utils.hasProperty(game.system.model.Actor[character.type], text)) {
+      if (foundry.utils.hasProperty(game.system.model.Actor[character.type], text) || 
+          (game.system.id=='worldbuilding' && foundry.utils.hasProperty(character.getRollData(), text))) {
         let val;
         if (game.release?.generation >= 10) val = foundry.utils.getProperty(character.system, text);
         else val = foundry.utils.getProperty(character.data.data, text);
