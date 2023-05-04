@@ -322,7 +322,6 @@ Actor.prototype.freeformSheet = async function(name) {
       if (!img) return true;
       if (!(ffs[id].showContentText)) $(this).html('');
       if (ffs[id].showContentImages) $(this).prepend($(`<img src="${img}">`));
-      //console.log($(this), content.name)
       this.dataset.tooltip = content.name;
     });
     $span.find('img').height(value.fontSize)
@@ -431,8 +430,13 @@ Actor.prototype.freeformSheet = async function(name) {
         }
         return;
       }
-      for (let [spanId, span] of Object.entries(character.getFlag('ffs', name)).filter(([id, span])=>span.text?.includes('@')))
-        d.element.find(`span#${spanId}`).html(await formatText(span.text)).find('img').height(span.fontSize);
+      for (let [key, value] of Object.entries(character.getFlag('ffs', name)).filter(([id, span])=>span.text?.includes('@'))) {
+        let $sheet = d.element.find('div.ffs');
+        $sheet.find(`span#${key}`).remove();
+        let value = doc.flags.ffs[name][key];
+        $sheet.append(await newSpan(key, value));
+      }
+        //d.element.find(`span#${spanId}`).html(await formatText(span.text)).find('img').height(span.fontSize);
     });
 
   //let waitRender = 100; if (!d._element)  while (!d._element  && waitRender-- > 0) await new Promise((r) => setTimeout(r, 50));
