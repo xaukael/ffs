@@ -12,6 +12,9 @@ Fonts can be added through the core font settings.
 
 Updates
 
+1.13.3
+  - remove console.log from actor update hook
+
 1.13.2
   - updates to spans will no longer trigger a whole sheet render for other user viewing the sheet, but just refresh that span
 
