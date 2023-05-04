@@ -349,7 +349,8 @@ Actor.prototype.freeformSheet = async function(name) {
         #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs * {border: unset !important; padding: 0; background: unset; background-color: unset; color: ${color};} 
         #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span > input:focus {box-shadow: unset; } 
         #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span:focus-visible {outline-color:white; outline: ${color} solid 2px; outline-offset: 3px;}
-        #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span { white-space: fwrap; position: absolute; }
+        #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span { white-space: wrap; position: absolute; }
+        #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span > a.content-link > img {margin-right: .1em;} 
         ${!showContentIcons?`#${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span > a.content-link > i {display:none;} 
         #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span > a.inline-roll > i {display:none;} `:''}
       </style>`));
