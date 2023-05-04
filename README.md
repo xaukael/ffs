@@ -12,6 +12,10 @@ Fonts can be added through the core font settings.
 
 Updates
 
+1.13.4
+  - fixed css bugs
+  - added right margin to content link images
+
 1.13.3
   - remove console.log from actor update hook
 
