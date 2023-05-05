@@ -527,7 +527,7 @@ Actor.prototype.freeformSheet = async function(name) {
           [...Object.keys(game.settings.get('core', 'fonts')), ...CONFIG.fontFamilies].reduce((a,f)=>a+=`<option value="${f}" style="font-family: ${f};">${f}</option>`,`<select class="fontFamily" style="width:100%"  data-tooltip="Font Family">`) + `</select>`
         }
         ${[...Array(10)].map((x,i)=>(i+1)*100).reduce((a,w)=>a+=`<option value="${w}" style="font-weight: ${w};">${w}</option>`,`<select class="fontWeight" style="width:100%" data-tooltip="Font Weight">`)+`</select>`}
-        ${[...Array(50)].map((x,i)=>(i+1)).reduce((a,w)=>a+=`<option value="${w}">${w}px</option>`,`<select class="fontSize" style="width:100%" data-tooltip="Default Font Size">`)+`</select>`}
+        ${[...Array(30)].map((x,i)=>Math.max((i+2)*2*2)).reduce((a,w)=>a+=`<option value="${w}">${w}px</option>`,`<select class="fontSize" style="width:100%" data-tooltip="Default Font Size">`)+`</select>`}
         <input class="fontColor" type="color" value="" style="border:unset; padding: 0; width: 100%"  data-tooltip="Font Color">
         `,
         buttons: {confirm: {label:"", icon: '<i class="fas fa-check"></i>', callback: async (html)=>{}}},
