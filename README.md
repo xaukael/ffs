@@ -12,6 +12,12 @@ Fonts can be added through the core font settings.
 
 Updates
 
+1.14.4
+  - changed font size options to increase on a power scale rather than linear
+
+1.14.1-3
+  - Simple World Building fixes to use system rather than roll data
+
 1.14.0
   - added workaround to get editable fields working for simple world building system
 
