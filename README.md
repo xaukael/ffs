@@ -12,6 +12,9 @@ Fonts can be added through the core font settings.
 
 Updates
 
+1.14.5
+  - config updates and span deletes are now reflected across clients
+
 1.14.4
   - changed font size options to increase on a power scale rather than linear
 
