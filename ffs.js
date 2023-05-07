@@ -415,15 +415,21 @@ Actor.prototype.freeformSheet = async function(name) {
   if (ffs[id].hook) Hooks.off(`update${this.documentName}`, ffs[id].hook)
   ffs[id].hook = 
     Hooks.on(`update${this.documentName}`, async (doc, updates, context, userId)=>{
-      //console.log(doc, updates, context, userId);
+      //console.log(updates);
       if (doc.id!=character.id) return;
       if (!d.element) return;
       if (foundry.utils.hasProperty(updates, "flags.ffs") && game.user.id == userId) return true;
-      if (game.user.id != userId && foundry.utils.hasProperty(updates, `flags.ffs.${name}.config`)) return d.render(true);
+      if (game.user.id != userId && foundry.utils.hasProperty(updates, `flags.ffs.${name}.config`)) {
+        ffs[id] = {...ffs[id], ...foundry.utils.getProperty(updates, `flags.ffs.${name}.config`)};
+        return d.render(true);
+      }
       if (game.user.id != userId && foundry.utils.hasProperty(updates, `flags.ffs.${name}`)) {
         for (let key of Object.keys(updates.flags.ffs[name])) {
-          //console.log(`updating span#${key}`);
           let $sheet = d.element.find('div.ffs');
+          if (key.includes('-=')) {
+            key = key.replace('-=', '');
+            return $sheet.find(`span#${key}`).remove();
+          }
           $sheet.find(`span#${key}`).remove();
           let value = doc.flags.ffs[name][key];
           $sheet.append(await newSpan(key, value));
