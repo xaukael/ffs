@@ -12,6 +12,9 @@ Fonts can be added through the core font settings.
 
 Updates
 
+1.14.6
+  - double clicking a field with @name text will now show a dialog to change the actor name
+
 1.14.5
   - config updates and span deletes are now reflected across clients
 
