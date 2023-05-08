@@ -413,7 +413,7 @@ Actor.prototype.freeformSheet = async function(name) {
           else text = CONFIG[data.type].collection.instance.get(data.id).link
         if (!text) return;
         let id = randomID();
-        let value = {x: e.offsetX, y: e.offsetY-8, text, fontSize: 16};
+        let value = {x: e.offsetX, y: e.offsetY-8, text, fontSize: fontSize};
         await character.setFlag('ffs', [`${name}`], {[`${id}`]: value});
         let $span = await newSpan(id, value);
         $(this).append($span);
