@@ -262,9 +262,7 @@ Actor.prototype.freeformSheet = async function(name) {
       text = text.replace('@', '');
       if (foundry.utils.hasProperty(game.system.model.Actor[character.type], text) || 
           (game.system.id=='worldbuilding' && foundry.utils.hasProperty(character.system, text))) {
-        let val;
-        if (game.release?.generation >= 10) val = foundry.utils.getProperty(game.release?.generation>=10?character.system:character.data.data, text);
-        else val = foundry.utils.getProperty(character.data.data, text);
+        let val = foundry.utils.getProperty(game.release?.generation>=10?character.system:character.data.data, text);
         if (typeof(val)=='object') return;
         let options = $(this).offset();
         options.left -= 190;
@@ -286,7 +284,28 @@ Actor.prototype.freeformSheet = async function(name) {
           }
         },{...options, id: `${id}-${key}-value-dialog`}).render(true);
       }
-
+      if (text == 'name') {
+        let val = foundry.utils.getProperty(character, text);
+        if (typeof(val)=='object') return;
+        let options = $(this).offset();
+        options.left -= 190;
+        options.top -= 45;
+        new Dialog({
+          title: `Edit ${text}`,
+          content: `<input type="${typeof(val)}" value="${val}" style="width: 100%; margin-bottom:.5em; text-align: center;" autofocus></input>`,
+          buttons: {confirm: {label:"", icon: '<i class="fas fa-check"></i>', callback: async (html)=>{
+            let input = html.find('input').val();
+            if (!input && input != 0) return ui.notifications.warn('empty values can be problematic for freeform sheets');
+            await character.update({"name": input});
+          }}},
+          default: 'confirm',
+          render: (html) =>{
+            html.find('input').select();
+          },
+          close: ()=>{ return
+          }
+        },{...options, id: `${id}-${key}-value-dialog`}).render(true);
+      }
       if (foundry.utils.hasProperty({flags:character.flags}, text)) {
         let flag = text.split('.');
         flag.shift();
