@@ -2,6 +2,10 @@
 
 Breif tutorial: https://youtu.be/XLnb0dkMItc
 
+Português do Brasil (Brazilian Portuguese)
+Personalize sua Ficha de Personagem no Foundry VTT - Freeform Sheets
+https://youtu.be/5HwAJedjDbM
+
 Create configurable sheets for your character from image files.
 
 Supports: inline rolls, entity links, other enriched data, @attribute replacement for core actor fields as well as roll data.
