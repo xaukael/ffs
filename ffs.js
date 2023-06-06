@@ -94,6 +94,7 @@ Actor.prototype.freeformSheet = async function(name) {
       let change = 1;
       if (e.shiftKey) change = Math.max(Math.floor(fontSize/12), 1)*2;
       change *= e.originalEvent.wheelDelta>0?-1:1;
+      if (game.settings.get('ffs', 'invertSizing')) change*=-1;
       fontSize = Math.max(fontSize+change, 2);
       if (fontSize==2) return console.log('font size minimum reached');
       let y = (parseInt($(this).css('top'))-change);
@@ -370,9 +371,10 @@ Actor.prototype.freeformSheet = async function(name) {
         #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span > input:focus {box-shadow: unset; } 
         #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span:focus-visible {outline-color:white; outline: ${color} solid 2px; outline-offset: 3px;}
         #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span { white-space: wrap; position: absolute; }
-        #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span > a.content-link > img {margin-right: .1em;} 
-        ${!showContentIcons?`#${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span > a.content-link > i {display:none;} 
-        #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span > a.inline-roll > i {display:none;} `:''}
+        #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span a.content-link > img {margin-right: .1em;} 
+        #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span a:hover {text-shadow: 0 0 8px ${color} }
+        ${!showContentIcons?`#${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span a.content-link > i {display:none;} 
+        #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span  a.inline-roll > i {display:none;} `:''}
       </style>`));
       html.parent().css({background:'unset'});
       let bgScale = game.settings.get('ffs', 'sheets')[name].scale || 1;
@@ -1126,6 +1128,15 @@ Hooks.once("init", async () => {
     type: String,
     choices: Object.keys(game.settings.get('ffs', 'sheets')).reduce((a,k)=>{return a= {...a, [k]:k}},{default:""}),
     default: "default",
+    config: true
+  });
+
+  game.settings.register('ffs', 'invertSizing', {
+    name: `Invert Sizing`,
+    hint: `When enabled mouse wheel down will reduce text size rather than increase.`,
+    scope: "client",
+    type: Boolean,
+    default: false,
     config: true
   });
 
