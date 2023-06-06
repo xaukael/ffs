@@ -15,6 +15,9 @@ Fonts can be added through the core font settings.
 ![Freefrom Sheet Example](https://user-images.githubusercontent.com/37848032/235782729-8c172940-526c-4103-8dee-765351e40510.png)
 
 Updates
+1.14.8
+  - version bump, no changes needed
+
 1.14.7
   - dropped content now has configured font size
 
