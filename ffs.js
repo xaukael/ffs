@@ -270,7 +270,7 @@ Actor.prototype.freeformSheet = async function(name) {
         options.top -= 45;
         new Dialog({
           title: `Edit ${text}`,
-          content: `<input type="${typeof(val)}" value="${val}" style="width: 100%; margin-bottom:.5em; text-align: center;" autofocus></input>`,
+          content: `<input type="${typeof(val)}" value="" style="width: 100%; margin-bottom:.5em; text-align: center;" autofocus></input>`,
           buttons: {confirm: {label:"", icon: '<i class="fas fa-check"></i>', callback: async (html)=>{
             let input = html.find('input').val();
             if (html.find('input')[0].type == 'number') input = Number(input)
@@ -279,7 +279,7 @@ Actor.prototype.freeformSheet = async function(name) {
           }}},
           default: 'confirm',
           render: (html) =>{
-            html.find('input').select();
+            html.find('input').val(val).select();
           },
           close: ()=>{ return
           }
@@ -468,8 +468,10 @@ Actor.prototype.freeformSheet = async function(name) {
 
   //let waitRender = 100; if (!d._element)  while (!d._element  && waitRender-- > 0) await new Promise((r) => setTimeout(r, 50));
 
-  Hooks.once('renderDialog', (app, html)=>{
+  Hooks.once('renderDialog', (app, html, options)=>{
     // set header buttons
+    app.object=character;
+    html.closest('.dialog').addClass('sheet')
     let $header  = html.find('header');
     if (game.user.isGM)
       $header.find('h4.window-title').after($(`<a class="ffs-tool" data-tooltip="Configure Sheet"><i class="fas fa-cog"></i></a>`).click(async function(){
