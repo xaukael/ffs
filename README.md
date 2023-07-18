@@ -15,6 +15,12 @@ Fonts can be added through the core font settings.
 ![Freefrom Sheet Example](https://user-images.githubusercontent.com/37848032/235782729-8c172940-526c-4103-8dee-765351e40510.png)
 
 Updates
+
+1.15.0
+  - fixed value editor dialog so that it does not break if there is a double quote in the value
+  - added the actor in the object variable of the app
+  - added sheet to the class of the sheet window
+
 1.14.9
   - color of hovered links on the sheet now matches the text color
 
