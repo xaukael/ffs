@@ -18,6 +18,7 @@ Updates
 
 1.15.2
   - fixed null value roll formula fields that should be shown as 0 not being replaced
+  - images dragged from the tile browser can now be dropped as img elements
 
 1.15.0
   - fixed value editor dialog so that it does not break if there is a double quote in the value
