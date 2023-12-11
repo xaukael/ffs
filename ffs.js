@@ -3,6 +3,7 @@
 */
 Actor.prototype.freeformSheet = async function(name) {
   let character = this;
+  if (character.permission<2) return ui.notifications.warn("You do not have adequate permissions to view this actor's sheet")
   name = name.slugify().replace(/[^a-zA-Z0-9\- ]/g, '');
   
   //console.log(`Rendering Freeform Sheet ${name} for ${character.name}`)
@@ -40,8 +41,8 @@ Actor.prototype.freeformSheet = async function(name) {
   if (ffs[id].position) options = {...options, ...ffs[id].position}
 
   let formatText = async function(text) {
-    if (game.release?.generation >= 10) return await TextEditor.enrichHTML(Roll.replaceFormulaData(text, {...character.system, ...character.getRollData(), ...{flags:character.flags}, name: character.name}), {async:true})
-    else return await TextEditor.enrichHTML(Roll.replaceFormulaData(text, {...character.data.data, ...character.getRollData(), ...{flags:character.data.flags}, name: character.name}), {async:true})
+    if (game.release?.generation >= 10) return await TextEditor.enrichHTML(Roll.replaceFormulaData((await TextEditor.enrichHTML(text, {async:true, rolls:false})), {...character.system, ...character.getRollData(), ...{flags:character.flags}, name: character.name}, {missing: 0} ), {async:true})
+    else return await TextEditor.enrichHTML(Roll.replaceFormulaData((await TextEditor.enrichHTML(text, {async:true, rolls:false})), {...character.data.data, ...character.getRollData(), ...{flags:character.data.flags}, name: character.name}, {missing: 0} ), {async:true})
   }
 
   let newSpan = async function(key, value){
@@ -409,10 +410,13 @@ Actor.prototype.freeformSheet = async function(name) {
         e.originalEvent.preventDefault();
         let data;
         let text = e.originalEvent.dataTransfer.getData("Text");
+        console.log(text)
         try{data = JSON.parse(text);}catch(e){}
-        if (typeof data == 'object')
+        if (typeof data == 'object' && data.type!= "Tile")
           if (game.release?.generation >= 10) text = fromUuidSync(data.uuid).link
           else text = CONFIG[data.type].collection.instance.get(data.id).link
+        if (typeof data == 'object' && data.type== "Tile")
+          text = `<img src="${data.texture.src}">`
         if (!text) return;
         let id = randomID();
         let value = {x: e.offsetX, y: e.offsetY-8, text, fontSize: fontSize};
