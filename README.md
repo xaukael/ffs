@@ -16,6 +16,9 @@ Fonts can be added through the core font settings.
 
 Updates
 
+1.15.2
+  - fixed null value roll formula fields that should be shown as 0 not being replaced
+
 1.15.0
   - fixed value editor dialog so that it does not break if there is a double quote in the value
   - added the actor in the object variable of the app
