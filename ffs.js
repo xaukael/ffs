@@ -41,10 +41,13 @@ Actor.prototype.freeformSheet = async function(name) {
   if (ffs[id].position) options = {...options, ...ffs[id].position}
 
   let formatText = async function(text) {
-    if (game.release?.generation >= 10) return await TextEditor.enrichHTML(Roll.replaceFormulaData((await TextEditor.enrichHTML(text, {async:true, rolls:false})), {...character.system, ...character.getRollData(), ...{flags:character.flags}, name: character.name}, {missing: 0} ), {async:true})
-    else return await TextEditor.enrichHTML(Roll.replaceFormulaData((await TextEditor.enrichHTML(text, {async:true, rolls:false})), {...character.data.data, ...character.getRollData(), ...{flags:character.data.flags}, name: character.name}, {missing: 0} ), {async:true})
+    const charaData = game.release?.generation >= 10 ? character.system : character.data.data;
+    const flags = game.release?.generation >= 10 ? character.flags : character.data.flags;
+    const rollData = {...charaData, ...character.getRollData(), flags, name: character.name};
+    text = await TextEditor.enrichHTML(text, {async:true, rolls:true, rollData});
+    return Roll.replaceFormulaData(text, rollData, {missing: 0});
   }
-
+//TextEditor.enrichHTML(text, {async:true, secrets:false, documents:false, links:false, rolls:true})
   let newSpan = async function(key, value){
     let updateSizeDebounce = foundry.utils.debounce((character,name,key,fontSize,y)=> {
       character.setFlag('ffs', [`${name}.${key}`], {fontSize, y}) 
@@ -57,7 +60,7 @@ Actor.prototype.freeformSheet = async function(name) {
       text = match[0];
       text = text.replace('@', '');
       if (!foundry.utils.hasProperty(game.system.model.Actor[character.type], value.text)) cursor = 'pointer';
-      if (game.system.id=='worldbuilding' && foundry.utils.hasProperty(game.release?.generation>=10?character.system:character.data.data, 'attributes.attr1.value')) cursor = 'pointer';
+      if (game.system.id=='worldbuilding' && foundry.utils.hasProperty(game.release?.generation>=10?character.system:character.data.data, value.text)) cursor = 'pointer';
     }
     let $span = $(`<span id="${key}" style="cursor: ${cursor}; position: absolute;">${await formatText(value.text)}<span>`);
     $span.css({left: value.x+'px', top: value.y+'px', fontSize: value.fontSize})
@@ -99,6 +102,7 @@ Actor.prototype.freeformSheet = async function(name) {
       fontSize = Math.max(fontSize+change, 2);
       if (fontSize==2) return console.log('font size minimum reached');
       let y = (parseInt($(this).css('top'))-change);
+      //if ($(this).text()==""&&$(this).html().includes('img')) y+= change/2;
       $(this).css({fontSize: fontSize +"px", top: y+'px'});
       $(this).find('img').height(fontSize)
       $('.font-tooltip').remove();
@@ -191,7 +195,7 @@ Actor.prototype.freeformSheet = async function(name) {
               for (let key of Object.keys(property)) {
                 let prop = foundry.utils.getProperty(character, `${objectPath}.${key}`)
                 //let prop = foundry.utils.getProperty(rollData, `${objectPath}.${key}`)
-                if (typeof(prop) === 'object') {
+                if (typeof(prop) === 'object' && prop != null) {
                   let objectel = $(`
                   <div class="object-path" data-path="${objectPath}.${key}" style="${objectPath=="system"?'':'margin-left: 1em;'}">
                     <a>${key} +</a>
@@ -252,7 +256,7 @@ Actor.prototype.freeformSheet = async function(name) {
       }
       $(this).html(text);
       $(this).prop('role',"textbox")
-      $(this).prop('contenteditable',"true")
+      $(this).prop('contenteditable',"plaintext-only") // TEST
       $(this).trigger('focusin');//focus()
     })
     .dblclick(function(e){
@@ -477,10 +481,11 @@ Actor.prototype.freeformSheet = async function(name) {
     app.object=character;
     html.closest('.dialog').addClass('sheet')
     let $header  = html.find('header');
-    if (game.user.isGM)
-      $header.find('h4.window-title').after($(`<a class="ffs-tool" data-tooltip="Configure Sheet"><i class="fas fa-cog"></i></a>`).click(async function(){
-        ffs.configure(name)
-      }));
+    //if (game.user.isGM)
+    $header.find('h4.window-title').after($(`<a class="ffs-tool" data-tooltip="Sheet${game.user.isGM?'<br>Ctrl+Click FFS Config':''}"><i class="fas fa-cog"></i></a>`).click(function(e){
+      if (e.ctrlKey) return ffs.configure(name)
+      new DocumentSheetConfig(character).render(true)
+    }));
     // to remember last position  
     html.click(function(){if (app._element) ffs[id].position = app._element.offset(); })
 
@@ -1280,4 +1285,29 @@ Hooks.once('setup', function () {
       actor.freeformSheet(game.settings.get('ffs', 'defaultSheet'))
      },
   })
+})
+
+
+class defaultActorFFS extends ActorSheet {
+
+  static get defaultOptions() {
+    const _default = super.defaultOptions;
+
+    return {
+      ..._default,
+      classes: ['hidden', 'sheet', 'actor', 'ffs-dummy', 'form'],
+      
+    };
+  }
+  render() {
+    let defaultSheet = game.settings.get('ffs', 'defaultSheet');
+    this.actor.freeformSheet(defaultSheet)
+    console.log(this)
+    this.close()
+  }
+
+}
+
+Hooks.once('ready', function () {
+  Actors.registerSheet('ffs', defaultActorFFS);
 })
