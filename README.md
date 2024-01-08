@@ -16,6 +16,9 @@ Fonts can be added through the core font settings.
 
 Updates
 
+1.16.0
+  - the default freeform sheet can now be selected in the actor sheet config
+
 1.15.2
   - fixed null value roll formula fields that should be shown as 0 not being replaced
   - images dragged from the tile browser can now be dropped as img elements
