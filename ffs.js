@@ -1167,8 +1167,13 @@ Hooks.on('getActorSheetHeaderButtons', (app, buttons)=>{
     "label": "Freeform Sheet",
     "class": "ffs-sheet",
     "icon": "fas fa-file-alt",
-    onclick: (e)=>{
-      let defaultSheet = app.actor.getFlag('ffs', 'defaultSheet');
+    onclick: async (e)=>{
+      let sheets = Object.keys(game.settings.get('ffs', 'sheets'))
+      let defaultSheet = app.actor.getFlag('ffs', 'defaultSheet')
+      if (!defaultSheet) {
+        defaultSheet = sheets[0]
+        await app.actor.setFlag('ffs', 'defaultSheet', defaultSheet)
+      }
       if (defaultSheet!='default') return app.actor.freeformSheet(defaultSheet)
       ffs.sheets(app.object, e);
     }
