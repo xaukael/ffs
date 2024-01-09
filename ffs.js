@@ -14,7 +14,7 @@ Actor.prototype.freeformSheet = async function(name) {
   let id = `ffs-${name}-${character.id}`;
   
   if ($(`div#${id}`).length) 
-    return ui.windows[$(`div#${id}`).data().appid].render(true).bringToTop();
+    return ui.windows[$(`div#${id}`).data().appid].close()//render(true).bringToTop();
 
   if (!character.getFlag('ffs', name)) 
     await character.setFlag('ffs', [name], {})
@@ -482,8 +482,8 @@ Actor.prototype.freeformSheet = async function(name) {
     html.closest('.dialog').addClass('sheet')
     let $header  = html.find('header');
     //if (game.user.isGM)
-    $header.find('h4.window-title').after($(`<a class="ffs-tool" data-tooltip="Sheet${game.user.isGM?'<br>Ctrl+Click FFS Config':''}"><i class="fas fa-cog"></i></a>`).click(function(e){
-      if (e.ctrlKey) return ffs.configure(name)
+    $header.find('h4.window-title').after($(`<a class="ffs-tool" data-tooltip="Sheet"><i class="fas fa-cog"></i></a>`).click(function(e){
+      //if (e.ctrlKey) return ffs.configure(name) ${game.user.isGM?'<br>Ctrl+Click FFS Config':''}
       new DocumentSheetConfig(character).render(true)
     }));
     // to remember last position  
@@ -1122,7 +1122,7 @@ Hooks.once("init", async () => {
     type: SettingsShim,   
     restricted: true                   
   });
-
+/*
   game.settings.register('ffs', 'overridePlayerCharacterSheet', {
     name: `Override Player's Actor Sheets`,
     hint: `Players will not be able to access the system character sheets and the default sheet will be shown instead.`,
@@ -1141,7 +1141,7 @@ Hooks.once("init", async () => {
     default: "default",
     config: true
   });
-
+*/
   game.settings.register('ffs', 'invertSizing', {
     name: `Invert Sizing`,
     hint: `When enabled mouse wheel down will reduce text size rather than increase.`,
@@ -1152,7 +1152,7 @@ Hooks.once("init", async () => {
   });
 
 });
-
+/*
 Hooks.on('renderActorSheet', (app, html, data)=>{
   if (!game.settings.get('ffs', 'overridePlayerCharacterSheet')) return;
   if (game.user.isGM) return;
@@ -1161,7 +1161,7 @@ Hooks.on('renderActorSheet', (app, html, data)=>{
   html.css({display:'none'})
   html.ready(function(){app.close()})
 });
-
+*/
 Hooks.on('getActorSheetHeaderButtons', (app, buttons)=>{
   if (Object.keys(game.settings.get('ffs', 'sheets')).length)
   buttons.unshift({
@@ -1169,8 +1169,8 @@ Hooks.on('getActorSheetHeaderButtons', (app, buttons)=>{
     "class": "ffs-sheet",
     "icon": "fas fa-file-alt",
     onclick: (e)=>{
-      let defaultSheet = game.settings.get('ffs', 'defaultSheet');
-      if (defaultSheet!='default') return app.object.freeformSheet(defaultSheet)
+      let defaultSheet = app.actor.get('ffs', 'defaultSheet');
+      if (defaultSheet!='default') return app.actor.freeformSheet(defaultSheet)
       ffs.sheets(app.object, e);
     }
   })
@@ -1187,6 +1187,7 @@ Hooks.on('renderActorSheet', (app, html)=>{
 Hooks.on('getActorDirectoryEntryContext', (app, options)=>{
   for (let name of Object.keys(game.settings.get('ffs', 'sheets'))) {
     let templateActor = game.actors.find(a=>a.getFlag('ffs', name)?.template);
+    /*
     options.push(
       {
         "name": `${name.capitalize()} Freeform Sheet`,
@@ -1201,6 +1202,7 @@ Hooks.on('getActorDirectoryEntryContext', (app, options)=>{
         }
       }
     );
+    */
     if (templateActor && game.user.isGM) {
       options.push(
         {
@@ -1261,7 +1263,7 @@ Hooks.on('ready', ()=>{
     close:()=>{return;}
   }).render(true)
 })
-
+/*
 Hooks.once('setup', function () {
   const { SHIFT, ALT, CONTROL } = KeyboardManager.MODIFIER_KEYS
   game.keybindings.register('ffs', 'open-freeform-sheet', {
@@ -1286,7 +1288,7 @@ Hooks.once('setup', function () {
      },
   })
 })
-
+*/
 
 class defaultActorFFS extends ActorSheet {
 
@@ -1295,14 +1297,13 @@ class defaultActorFFS extends ActorSheet {
 
     return {
       ..._default,
-      classes: ['hidden', 'sheet', 'actor', 'ffs-dummy', 'form'],
-      
+      classes: ['hidden', 'sheet', 'actor', 'ffs-dummy', 'form']
     };
   }
   render() {
-    let defaultSheet = game.settings.get('ffs', 'defaultSheet');
+    let defaultSheet = this.actor.getFlag('ffs', 'defaultSheet') //game.settings.get('ffs', 'defaultSheet');
+    if (!defaultSheet) return new DocumentSheetConfig(game.user.character).render(true)
     this.actor.freeformSheet(defaultSheet)
-    console.log(this)
     this.close()
   }
 
@@ -1310,4 +1311,29 @@ class defaultActorFFS extends ActorSheet {
 
 Hooks.once('ready', function () {
   Actors.registerSheet('ffs', defaultActorFFS);
+})
+
+Hooks.on('renderDocumentSheetConfig', async (app, html)=>{
+  console.log(app.object.documentName)
+  if (app.object.documentName != 'Actor') return;
+  let sheets = Object.keys(game.settings.get('ffs', 'sheets'))
+  if (sheets.length == 0) return
+  let defaultSheet = app.object.getFlag('ffs', 'defaultSheet')
+  if (!defaultSheet) {
+    defaultSheet = sheets[0]
+    await app.object.setFlag('ffs', 'defaultSheet', defaultSheet)
+  }
+  let select = $(`<select>${sheets.reduce((a,k)=> a+=`<option value="${k}">${k}</option>`,``)}</select>`)
+  select.val(defaultSheet)
+  select.change(function(){
+    app.object.setFlag('ffs', 'defaultSheet', this.value)
+  })
+  let group = $(`<div class="form-group">
+        <label>Freeform Sheet</label>
+        
+        <p class="notes">Which sheet to open when ffs.defaultActorFFS is selected.</p>
+    </div>`)
+  group.find('label').after(select)
+  html.find('button').before(group)
+  app.setPosition({height: 'auto'})
 })
