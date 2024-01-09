@@ -1001,9 +1001,8 @@ class ffsSettingsApp extends Dialog {
       return a+=`<div style="margin-bottom:.5em;"><h2>${name}<a class="delete" name="${name}" style="float:right"><i class="fas fa-times"></i></a></h2>
         <a class="configure" name="${name}" ><img src="${config.background}" height=300></a><br>
         <button class="template" name="${name}" style="width: 200px">${game.actors.find(a=>a.getFlag('ffs', name)?.template)?'Edit':'Create'} Template Actor</button>
-        <button class="default" name="${name}" style="width: 200px">${(game.settings.get('ffs', 'defaultSheet') == name)?'Default':'Set Default'}</button>
         </div>
-        `}	,``)));//
+        `}	,``)));//<button class="default" name="${name}" style="width: 200px">${(game.settings.get('ffs', 'defaultSheet') == name)?'Default':'Set Default'}</button>
       d.setPosition({height: 'auto'});
       html.find('a.configure').click(function(){ffs.configure(this.name);});
       html.find('a.delete').click(async function(){
@@ -1013,11 +1012,11 @@ class ffsSettingsApp extends Dialog {
         delete sheets[this.name];
         await game.settings.set('ffs', 'sheets', sheets);
         d.render(true);
-      });
+      });/*
       html.find('button.default').click(async function(){
         await game.settings.set('ffs', 'defaultSheet', this.name);
         d.render(true);
-      })
+      })*/
       html.find('button.add').click(async function(){
         let name = await Dialog.prompt({
           title:'Input sheet Name',
