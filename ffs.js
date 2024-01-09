@@ -1339,5 +1339,8 @@ Hooks.on('renderDocumentSheetConfig', async (app, html)=>{
     </div>`)
   group.find('label').after(select)
   html.find('button').before(group)
+  html.find('button').click(function(){
+    Object.values(ui.windows).filter(w=>w.id.includes(app.object.id)).forEach(w=>w.close())
+  })
   app.setPosition({height: 'auto'})
 })
