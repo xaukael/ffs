@@ -1169,7 +1169,7 @@ Hooks.on('getActorSheetHeaderButtons', (app, buttons)=>{
     "class": "ffs-sheet",
     "icon": "fas fa-file-alt",
     onclick: (e)=>{
-      let defaultSheet = app.actor.get('ffs', 'defaultSheet');
+      let defaultSheet = app.actor.getFlag('ffs', 'defaultSheet');
       if (defaultSheet!='default') return app.actor.freeformSheet(defaultSheet)
       ffs.sheets(app.object, e);
     }
