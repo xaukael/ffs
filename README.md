@@ -16,6 +16,11 @@ Fonts can be added through the core font settings.
 
 Updates
 
+1.16.1
+  - actor specific freeform sheet selection added to actor sheet config
+  - defaultSheet and overridePlayerCharacterSheet settings removed as they are no longer needed
+  - actor directory context menu options to open sheets have been removed as they are no longer needed
+
 1.16.0
   - the default freeform sheet can now be selected in the actor sheet config
 
