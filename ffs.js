@@ -1163,7 +1163,7 @@ class ffsSettingsApp extends Dialog {
       html.find('button.template').click(async function(){
         let sheets = game.settings.get('ffs', 'sheets')
         let name = this.name
-        let docType = sheets[name].document
+        let docType = sheets[name].document ??"Actor"
         let type = await Dialog.prompt({
             title: 'Select Actor Type', 
             content: Object.keys(game.system.model[docType]).reduce((a,x)=>a+=`<button class="type">${x}</button>`,``),
