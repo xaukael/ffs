@@ -15,6 +15,17 @@ Fonts can be added through the core font settings.
 ![Freefrom Sheet Example](https://user-images.githubusercontent.com/37848032/235782729-8c172940-526c-4103-8dee-765351e40510.png)
 
 Updates
+1.17.0
+  - condensed header buttons to a menu 
+  - sheets can now be configured for items
+  - added dynamic settings to set default sheets for each type of actor and item
+  - templates can now be created for each type of actor/item
+  - directory context menu added for templates to apply to all actor/item of that type (only applies to collection items)
+  - id added to @ replacements for easier inline js hacks
+  - id/uuid header button added to be more like normal sheets
+  - z-index added to elements. dragged elements are brought to top on drag. Ctrl+Wheel alters z-index similar to how text is sized (add shift to change by 5). z-indexes are condensed to sequential on each load.
+  - fixed bug where header buttons were added multiple times if multiple sheets were opened quickly
+  - fixed inline onclick js triggering on drag
 
 1.16.2 - 1.16.4
   - bug fixes
