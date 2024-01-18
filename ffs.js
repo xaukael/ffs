@@ -466,8 +466,6 @@ ffs.freeformSheet = async function(name) {
       })
 
       if (locked) html.find(`.ffs > span`).draggable('disable')
-      d._onKeyDown = function(){console.log('keyevent')}
-      console.log(d._onKeyDown)
       if (rendered) return
       rendered = true
       d.addHeaderButtons(d, html, options)
@@ -809,7 +807,7 @@ ffs.freeformSheet = async function(name) {
       d.render(true);
       
     }).dblclick(function(e){e.stopPropagation();}));
-    console.log(html.find('a.lock-toggle'))
+    //console.log(html.find('a.lock-toggle'))
     if (ffs[id].locked) html.find('a.lock-toggle').attr('data-tooltip', "Unlock Sheet")
     else html.find('a.lock-toggle').attr('data-tooltip', "Lock Sheet")
     let buttons = []
