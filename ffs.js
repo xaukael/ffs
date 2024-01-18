@@ -47,7 +47,7 @@ ffs.freeformSheet = async function(name) {
   let formatText = async function(text) {
     const charaData = game.release?.generation >= 10 ? doc.system : doc.data.data;
     const flags = game.release?.generation >= 10 ? doc.flags : doc.data.flags;
-    const rollData = {...charaData, ...doc.getRollData(), flags, name: doc.name, id: doc.id};
+    const rollData = {...charaData, ...doc.getRollData(), flags, name: doc.name, id: doc.id, uuid: doc.uuid};
     text = await TextEditor.enrichHTML(text, {async:true, rolls:true, rollData});
     return Roll.replaceFormulaData(text, rollData, {missing: 0});
   }
@@ -1303,7 +1303,7 @@ Hooks.once("init", async () => {
     type: Object,
     default: {},         
     onChange: value => { 
-      ui.windows[$('#client-settings').data().appid]?.render(true)
+      ui.windows[$('#client-settings').data()?.appid]?.render(true)
       $('div[id^=ffs]').each(function(){
         ui.windows[$(this).data().appid].close();
       })
@@ -1490,6 +1490,13 @@ Hooks.on('getSidebarDirectoryEntryContext', (element, options)=>{
 
 Hooks.on('ready', ()=>{
   if (!game.user.isGM) return;
+  let sheets = game.settings.get('ffs', 'sheets')
+  let needDocument = Object.entries(sheets).filter(([k,v])=>!v.document)
+  if (needDocument.length) {
+    for (let [k,v] of needDocument)
+      sheets[k].document = "Actor"
+    game.settings.set('ffs', 'sheets', sheets)
+  }
   if (Object.keys(game.settings.get('ffs', 'sheets')).length) return;
   let d = new Dialog({
     title:'Welcome to Freeform Sheets',
@@ -1598,6 +1605,7 @@ class defaultItemFFS extends ItemSheet {
 Hooks.once('setup', function () {
   Actors.registerSheet('ffs', defaultActorFFS);
   Items.registerSheet('ffs', defaultItemFFS);
+
 })
 
 Hooks.on('renderDocumentSheetConfig', async (app, html)=>{
