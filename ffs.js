@@ -517,7 +517,7 @@ ffs.freeformSheet = async function(name) {
   d.addHeaderButtons = function(app, html, options){
     // set header buttons
     html = html.closest('.app')
-    console.log('addHeaderButtons', html)
+    //console.log('addHeaderButtons', html)
     app.object=doc;
     app[doc.documentName.toLowerCase()] = doc
     html.closest('.dialog').addClass('sheet')
@@ -533,7 +533,58 @@ ffs.freeformSheet = async function(name) {
     }));
     // to remember last position  
     html.click(function(){if (app._element) ffs[id].position = app._element.offset(); })
-    
+    $header.find('h4.window-title').after($(`<a  class="ffs-tool" data-tooltip="Data"><i class="fa-solid fa-at"></i></a>`).click(function(){
+      // This will create a dialog to find fields to use on your actor freeform sheet 
+      // You can drag fields from thid dialog directly to the sheet
+      // Great for templating complex systems
+      
+      function buildObjectElements(el, objectPath) {
+        let property = getProperty(doc, objectPath)
+        if (property===null) return;
+        for (let key of Object.keys(property)) {
+          let prop = foundry.utils.getProperty(doc, `${objectPath}.${key}`)
+          //let prop = foundry.utils.getProperty(rollData, `${objectPath}.${key}`)
+          if (typeof(prop) === 'object' && prop != null) {
+            let objectel = $(`
+            <div class="object-path" data-path="${objectPath}.${key}" style="${objectPath=="system"?'':'margin-left: 1em;'}">
+              <a>${key} +</a>
+            </div>`)
+            el.append(objectel)
+            buildObjectElements(objectel, `${objectPath}.${key}`)
+            //buildObjectElements(rollData, objectel, `${objectPath}.${key}`)
+          }
+          else
+            el.append($(
+            `<div class="value-path" data-path="${objectPath}.${key}" title="@${(objectPath+'.'+key).replace('system.','')}" style="${objectPath=="system"?'':'margin-left: 1em;'}">
+              <span>${key} : </span><a draggable="true">${typeof(prop)=="string"?`"${prop}"`:prop}</a>
+            </div>`));
+        }
+        return el;
+      }
+      
+      let fieldsDialog = new Dialog({title: doc.name + ' Data', content: '', buttons:{}, render: (html)=> {
+        let $atOptions = $(`<div class="a-object-path-root" data-path="system" 
+        style="width: max-content; height: max-content; "><a></a></div>`)
+        buildObjectElements($atOptions, `${(game.release?.generation >= 10)?'system':'data.data'}`)
+        $atOptions.find(`.object-path, .value-path`).hide()
+        $atOptions.children(`.object-path, .value-path`).show()
+        $atOptions.find('[draggable=true]')
+          .on('dragstart', function(e){
+            e.originalEvent.dataTransfer.setData("text/plain", '@'+$(this).parent().data().path.replace('system.','').replace('data.data.', ''))})
+          .css('cursor', 'grab')
+        $atOptions.find(`a`).click(function(){
+          $(this).parent().children('div').toggle()
+          fieldsDialog.setPosition({height: 'auto'})
+        })
+        $atOptions.find(`.value-path > a`).click(function(){
+          console.log('@'+$(this).parent().data().path.replace('system.','').replace('data.data.', ''))
+          fieldsDialog.setPosition({height: 'auto'})
+        })
+        
+        $(html[0]).append($atOptions)
+        
+      }},{height: 'auto', width: 200, left: app.position.left+app.position.width, top: app.position.top, resizable: true}).render(true)
+    }))
     
     $header.find('h4.window-title').after($(`<a class="ffs-tool" data-tooltip="Fix Sheet"><i class="fas fa-tools"></i>`).click(function(e){
       let sheet = doc.getFlag('ffs', name)
@@ -811,6 +862,23 @@ ffs.freeformSheet = async function(name) {
     if (ffs[id].locked) html.find('a.lock-toggle').attr('data-tooltip', "Unlock Sheet")
     else html.find('a.lock-toggle').attr('data-tooltip', "Lock Sheet")
     let buttons = []
+    const canConfigure = game.user.isGM || (doc.actor?.isOwner && game.user.can("TOKEN_CONFIGURE"));
+    if (canConfigure && doc.documentName=="Actor") {
+      buttons.splice(1, 0, {
+        label: d.token ? "Token" : "Proto Token",
+        class: "configure-token",
+        icon: "fas fa-user-circle",
+        onclick: ev => {
+          ev.preventDefault();
+          const renderOptions = {
+            left: Math.max(d.position.left - 560 - 10, 10),
+            top: d.position.top
+          };
+          if ( d.token ) return doc.token.sheet.render(true, renderOptions);
+          else new CONFIG.Token.prototypeSheetClass(d.actor.prototypeToken, renderOptions).render(true);
+        }
+      });
+    }
     Hooks.call(`get${doc.documentName}SheetHeaderButtons`, d, buttons);
     //console.log(buttons)
     for (let button of buttons) 
@@ -1415,8 +1483,9 @@ Hooks.on('renderActorSheet', (app, html)=>{
 */
 // add actor directory context menu options for each sheet
 
-Hooks.on('getSidebarDirectoryEntryContext', (element, options)=>{
+Hooks.on('getSidebarTabEntryContext', (element, options)=>{
   let collection = element[0].dataset.tab
+  console.log(collection)
   if (!["actors", "items"].includes(collection)) return
   for (let name of Object.entries(game.settings.get('ffs', 'sheets')).filter(([k,v])=>v.document==collection.capitalize().replace('s','')).map(([k,v])=>k)) {
     let templates = game[collection].filter(a=>a.getFlag('ffs', name)?.template);
