@@ -290,7 +290,7 @@ ffs.freeformSheet = async function(name) {
       }
       $(this).html(text);
       $(this).prop('role',"textbox")
-      $(this).prop('contenteditable',"plaintext-only") // TEST
+      $(this).prop('contenteditable',"true") // TEST
       $(this).trigger('focusin');//focus()
     })
     .dblclick(function(e){
@@ -450,7 +450,7 @@ ffs.freeformSheet = async function(name) {
         e.originalEvent.preventDefault();
         let data;
         let text = e.originalEvent.dataTransfer.getData("Text");
-        console.log(text)
+        //console.log(text)
         try{data = JSON.parse(text);}catch(e){}
         if (typeof data == 'object' && data.type!= "Tile")
           if (game.release?.generation >= 10) text = fromUuidSync(data.uuid).link
@@ -577,7 +577,7 @@ ffs.freeformSheet = async function(name) {
           fieldsDialog.setPosition({height: 'auto'})
         })
         $atOptions.find(`.value-path > a`).click(function(){
-          console.log('@'+$(this).parent().data().path.replace('system.','').replace('data.data.', ''))
+          //console.log('@'+$(this).parent().data().path.replace('system.','').replace('data.data.', ''))
           fieldsDialog.setPosition({height: 'auto'})
         })
         
@@ -1288,7 +1288,7 @@ class ffsSettingsApp extends Dialog {
             <option value="Item">Item</option>
           </select><hr>`,
           render: (html)=>{
-            console.log(sheets[name])
+            //console.log(sheets[name])
             html.find('select.document').val(docType)
             let table = `<style>div.types-form span {line-height: var(--form-field-height);}</style>
             <div class="types-form" style="display:grid; grid-template-columns:max-content max-content auto ; column-gap: 1em; row-gap: .2em; margin-bottom: .5em">
@@ -1315,7 +1315,7 @@ class ffsSettingsApp extends Dialog {
                 sheets[name].document = html.find('select.document').val()
                 sheets[name].types = [...html.find('input.available:checked')].map(e=> e.getAttribute('name'))
                 sheets[name].defaults = [...html.find('input.default:checked')].map(e=> e.getAttribute('name'))
-                console.log(sheets[name])
+                //console.log(sheets[name])
                 game.settings.set('ffs', 'sheets', sheets)
               }
             }
@@ -1428,7 +1428,7 @@ Hooks.once("init", async () => {
 
 });
 Hooks.on('renderSettingsConfig', (app, html, options)=>{
-  console.log(options)
+  //console.log(options)
   if (Object.entries(game.settings.get('ffs', 'sheets')).filter(([k,v])=>v.document=="Actor").length) {
     html.find('section[data-tab=ffs]').find('select[name$=ActorDefaultSheet]')
       .html(Object.entries(game.settings.get('ffs', 'sheets')).filter(([k,v])=>v.document=="Actor").reduce((a,[k,v])=> a+= `<option value="${k}">${k}</option>`,`<option value=""></option>`))
@@ -1485,7 +1485,6 @@ Hooks.on('renderActorSheet', (app, html)=>{
 
 Hooks.on('getSidebarTabEntryContext', (element, options)=>{
   let collection = element[0].dataset.tab
-  console.log(collection)
   if (!["actors", "items"].includes(collection)) return
   for (let name of Object.entries(game.settings.get('ffs', 'sheets')).filter(([k,v])=>v.document==collection.capitalize().replace('s','')).map(([k,v])=>k)) {
     let templates = game[collection].filter(a=>a.getFlag('ffs', name)?.template);
