@@ -17,7 +17,7 @@ ffs.freeformSheet = async function(name) {
   
   if ($(`div#${id}`).length) 
     return ui.windows[$(`div#${id}`).data().appid].close()//render(true).bringToTop();
-
+  
   if (!doc.getFlag('ffs', name)) 
     await doc.setFlag('ffs', [name], {})
   if (!doc.getFlag('ffs', name)?.config)
@@ -63,7 +63,12 @@ ffs.freeformSheet = async function(name) {
     if (match) {
       text = match[0];
       text = text.replace('@', '');
-      if (!foundry.utils.hasProperty(game.system.model[doc.documentName][doc.type], value.text)) cursor = 'pointer';
+      if (game.release.generation > 11) {
+        if (doc.system.schema.getField(text)) cursor = 'pointer';
+      }
+      else {
+        if (!foundry.utils.hasProperty(game.system.model[doc.documentName][doc.type], text)) cursor = 'pointer';
+      }
       if (game.system.id=='worldbuilding' && foundry.utils.hasProperty(game.release?.generation>=10?doc.system:doc.data.data, value.text)) cursor = 'pointer';
     }
     let $span = $(`<span id="text-${key}" style="cursor: ${cursor}; position: absolute; ${value.z?'z-index:'+value.z:''}">${await formatText(value.text)}<span>`);
@@ -89,6 +94,9 @@ ffs.freeformSheet = async function(name) {
       return $(this).blur();
     })
     .focusin(function(){
+      return;
+      //console.log($(this).prop('contenteditable'))
+      if ($(this).prop('contenteditable')) return;
       let selection = window.getSelection();
       let range = document.createRange();
       range.selectNodeContents(this);
@@ -225,6 +233,7 @@ ffs.freeformSheet = async function(name) {
             //let property = getProperty(rollData, objectPath)
             function buildObjectElements(el, objectPath) {
               let property = getProperty(doc, objectPath)
+              if (property.documentName) return;
               if (property===null) return;
               for (let key of Object.keys(property)) {
                 let prop = foundry.utils.getProperty(doc, `${objectPath}.${key}`)
@@ -291,7 +300,12 @@ ffs.freeformSheet = async function(name) {
       $(this).html(text);
       $(this).prop('role',"textbox")
       $(this).prop('contenteditable',"true") // TEST
-      $(this).trigger('focusin');//focus()
+      let selection = window.getSelection();
+      let range = document.createRange();
+      range.selectNodeContents(this);
+      selection.removeAllRanges();
+      selection.addRange(range);
+      //$(this).trigger('focusin');//focus()
     })
     .dblclick(function(e){
       let text = doc.getFlag('ffs', name)[key].text;
@@ -300,8 +314,12 @@ ffs.freeformSheet = async function(name) {
       match.findSplice(i=>i=='@UUID')
       text = match[0];
       text = text.replace('@', '');
-      if (foundry.utils.hasProperty(game.system.model[doc.documentName][doc.type], text) || 
-          (game.system.id=='worldbuilding' && foundry.utils.hasProperty(doc.system, text))) {
+      
+      let model = game.release.generation < 12 ? game.system.model : game.model
+
+      if (foundry.utils.hasProperty(model[doc.documentName][doc.type], text) || 
+          (game.system.id=='worldbuilding' && foundry.utils.hasProperty(doc.system, text)) ||
+         (game.release.generation > 11) && doc.system.schema.getField(text)) {
         let val = foundry.utils.getProperty(game.release?.generation>=10?doc.system:doc.data.data, text);
         if (typeof(val)=='object') return;
         let options = $(this).offset();
@@ -324,6 +342,7 @@ ffs.freeformSheet = async function(name) {
           }
         },{...options, id: `${id}-${key}-value-dialog`}).render(true);
       }
+      
       if (text == 'name') {
         let val = foundry.utils.getProperty(doc, text);
         if (typeof(val)=='object') return;
@@ -540,6 +559,7 @@ ffs.freeformSheet = async function(name) {
       
       function buildObjectElements(el, objectPath) {
         let property = getProperty(doc, objectPath)
+        if (property.documentName) return;
         if (property===null) return;
         for (let key of Object.keys(property)) {
           let prop = foundry.utils.getProperty(doc, `${objectPath}.${key}`)
@@ -658,7 +678,8 @@ ffs.freeformSheet = async function(name) {
         title: `Font Configuration`,
         content: `
         ${(game.release?.generation < 10)?
-          `<input type="text" class="fontFamily" placeholder="font name" style="width:100%">`:
+          `<input type="text" class="fontFamily" placeholder="font name" style="width:100%">`:(game.release?.generation > 11)?
+          [...Object.keys(game.settings.get('core', 'fonts')), ...Object.keys(CONFIG.fontDefinitions)].reduce((a,f)=>a+=`<option value="${f}" style="font-family: ${f};">${f}</option>`,`<select class="fontFamily" style="width:100%"  data-tooltip="Font Family">`):
           [...Object.keys(game.settings.get('core', 'fonts')), ...CONFIG.fontFamilies].reduce((a,f)=>a+=`<option value="${f}" style="font-family: ${f};">${f}</option>`,`<select class="fontFamily" style="width:100%"  data-tooltip="Font Family">`) + `</select>`
         }
         ${[...Array(10)].map((x,i)=>(i+1)*100).reduce((a,w)=>a+=`<option value="${w}" style="font-weight: ${w};">${w}</option>`,`<select class="fontWeight" style="width:100%" data-tooltip="Font Weight">`)+`</select>`}
@@ -1230,9 +1251,10 @@ class ffsSettingsApp extends Dialog {
         let sheets = game.settings.get('ffs', 'sheets')
         let name = this.name
         let docType = sheets[name].document ??"Actor"
+        let model = game.release.generation < 12 ? game.system.model : game.model
         let type = await Dialog.prompt({
             title: 'Select Actor Type', 
-            content: Object.keys(game.system.model[docType]).reduce((a,x)=>a+=`<button class="type">${x}</button>`,``),
+            content: Object.keys(model[docType]).reduce((a,x)=>a+=`<button class="type">${x}</button>`,``),
             callback:(html)=>  html.find(`button.selected`).text(),
             render: (html)=>{
               $(html[2]).hide()
@@ -1280,6 +1302,7 @@ class ffsSettingsApp extends Dialog {
         //sheets[this.name].document = this.innerText!='Item'?'Item':'Actor'
         //game.settings.set('ffs', 'sheets', sheets)
         let docType = sheets[name].document ?? 'Actor'
+        let model = game.release.generation < 12 ? game.system.model : game.model
         let docDialog =  new Dialog({
           title: `Configure ${name} sheet`, 
           content: `<label style="line-height: var(--form-field-height);">Document Type: </label>
@@ -1293,7 +1316,7 @@ class ffsSettingsApp extends Dialog {
             let table = `<style>div.types-form span {line-height: var(--form-field-height);}</style>
             <div class="types-form" style="display:grid; grid-template-columns:max-content max-content auto ; column-gap: 1em; row-gap: .2em; margin-bottom: .5em">
             <b>available</b><b>default</b><b>type</b>
-            ${Object.keys(game.system.model[docType]).reduce((a,x)=>a+=`
+            ${Object.keys(model[docType]).reduce((a,x)=>a+=`
             <input name="${x}" class="available" type="checkbox" ${sheets[name].types?.includes(x)?'checked':''}></input>
             <input name="${x}" class="default" type="checkbox" ${sheets[name].defaults?.includes(x)?'checked':''}></input>
             <span>${x}</span>`,``)}</div>`
@@ -1395,7 +1418,8 @@ Hooks.once("init", async () => {
     config: true
   });
 */
-  for (let type of Object.keys(game.system.model.Actor))
+  let model = game.release.generation < 12 ? game.system.model : game.model
+  for (let type of Object.keys(model.Actor))
     game.settings.register('ffs', `${type}ActorDefaultSheet`, {
       name: `Actor Sheet: ${type}`,
       hint: `Default sheet for actors of type ${type}`,
@@ -1406,7 +1430,7 @@ Hooks.once("init", async () => {
       config: true
     });
   
-  for (let type of Object.keys(game.system.model.Item))
+  for (let type of Object.keys(model.Item))
     game.settings.register('ffs', `${type}ItemDefaultSheet`, {
       name: `Item Sheet: ${type}`,
       hint: `Default sheet for items of type ${type}`,
@@ -1429,10 +1453,11 @@ Hooks.once("init", async () => {
 });
 Hooks.on('renderSettingsConfig', (app, html, options)=>{
   //console.log(options)
+  let model = game.release.generation < 12 ? game.system.model : game.model
   if (Object.entries(game.settings.get('ffs', 'sheets')).filter(([k,v])=>v.document=="Actor").length) {
     html.find('section[data-tab=ffs]').find('select[name$=ActorDefaultSheet]')
       .html(Object.entries(game.settings.get('ffs', 'sheets')).filter(([k,v])=>v.document=="Actor").reduce((a,[k,v])=> a+= `<option value="${k}">${k}</option>`,`<option value=""></option>`))
-    for (let type of Object.keys(game.system.model.Actor)) {
+    for (let type of Object.keys(model.Actor)) {
       html.find(`select[name="ffs.${type}ActorDefaultSheet"]`).val(game.settings.get('ffs', `${type}ActorDefaultSheet`))
     }
   } else html.find('section[data-tab=ffs]').find('select[name$=ActorDefaultSheet]').each(function(){$(this).closest('div.form-group').hide()})
@@ -1440,7 +1465,7 @@ Hooks.on('renderSettingsConfig', (app, html, options)=>{
   if (Object.entries(game.settings.get('ffs', 'sheets')).filter(([k,v])=>v.document=="Item").length) {
     html.find('section[data-tab=ffs]').find('select[name$=ItemDefaultSheet]')
       .html(Object.entries(game.settings.get('ffs', 'sheets')).filter(([k,v])=>v.document=="Item").reduce((a,[k,v])=> a+= `<option value="${k}">${k}</option>`,`<option value=""></option>`))
-    for (let type of Object.keys(game.system.model.Item)) {
+    for (let type of Object.keys(model.Item)) {
       html.find(`select[name="ffs.${type}ItemDefaultSheet"]`).val(game.settings.get('ffs', `${type}ItemDefaultSheet`))
     }
   } else html.find('section[data-tab=ffs]').find('select[name$=ItemDefaultSheet]').each(function(){$(this).closest('div.form-group').hide()})
@@ -1484,7 +1509,8 @@ Hooks.on('renderActorSheet', (app, html)=>{
 // add actor directory context menu options for each sheet
 
 Hooks.on('getSidebarTabEntryContext', (element, options)=>{
-  let collection = element[0].dataset.tab
+  
+  let collection = game.release.generation < 12 ? element[0].dataset.tab : element._element[0].dataset.tab
   if (!["actors", "items"].includes(collection)) return
   for (let name of Object.entries(game.settings.get('ffs', 'sheets')).filter(([k,v])=>v.document==collection.capitalize().replace('s','')).map(([k,v])=>k)) {
     let templates = game[collection].filter(a=>a.getFlag('ffs', name)?.template);
@@ -1630,7 +1656,10 @@ class defaultActorFFS extends ActorSheet {
       classes: ['hidden', 'sheet', 'actor', 'ffs-dummy', 'form']
     };
   }
-  render() {
+  render(force, options) {
+    if (!force) return true;
+    if (options?.render)
+      if (options?.render == false) return;
     let defaultSheet = this.actor.getFlag('ffs', 'defaultSheet') ?? game.settings.get('ffs', `${this.actor.type}ActorDefaultSheet`)
       //Object.entries(game.settings.get('ffs', 'sheets')).find(([k,v])=>v.document=="Actor"&&v.defaults?.includes(this.actor.type))?.at(0)
     if (!defaultSheet) {
@@ -1638,10 +1667,15 @@ class defaultActorFFS extends ActorSheet {
       if (game.user.isGM) alert(`Default Freeform Sheet not defined for actor type ${this.actor.type}`)
       return 
     }
+    //let openSheet = Object.values(ui.windows).find(w=>w.id==`ffs-${defaultSheet}-${this.actor.id}`)
+    //if (openSheet) return openSheet.render()
     this.actor.freeformSheet(defaultSheet)
     this.close()
+    return true;
   }
-
+   _onUpdateDescendantDocuments(parent, collection, documents, changes, options, userId) {
+     return true;
+   }
 }
 
 class defaultItemFFS extends ItemSheet {
