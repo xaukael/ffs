@@ -6,7 +6,7 @@
     "description": "Create character sheet for any system from just an image. Place text, stats, and content links anywhere at any size",
     "author": "Xaukael",
     "authors": [{"name":"Xaukael"}],
-    "version": "1.17.6",
+    "version": "1.17.7",
     "minimumCoreVersion": "9",
     "compatibleCoreVersion": "12",
     "compatibility": {

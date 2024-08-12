@@ -64,7 +64,7 @@ ffs.freeformSheet = async function(name) {
       text = match[0];
       text = text.replace('@', '');
       if (game.release.generation > 11) {
-        if (doc.system.schema.getField(text)) cursor = 'pointer';
+        if (doc.system.schema?.getField(text)) cursor = 'pointer';
       }
       else {
         if (!foundry.utils.hasProperty(game.system.model[doc.documentName][doc.type], text)) cursor = 'pointer';
