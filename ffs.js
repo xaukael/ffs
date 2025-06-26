@@ -631,6 +631,7 @@ ffs.freeformSheet = async function(name) {
             html.find('a.save').click(async function(e){
               await doc.setFlag('ffs', `${name}.${this.dataset.id}.text`, $(this).parent().next().val())
               ui.windows[$(`#ffs-${name}-${doc.id}`).data().appid].render(true)
+              d.bringToTop();
             })
             html.find('a.delete').click(async function(e){
               await doc.unsetFlag('ffs', `${name}.${this.dataset.id}`)
