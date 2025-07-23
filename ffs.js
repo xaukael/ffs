@@ -1454,6 +1454,7 @@ Hooks.once("init", async () => {
 });
 Hooks.on('renderSettingsConfig', (app, html, options)=>{
   //console.log(options)
+  if (html.nodeName) html = $(html)
   let model = game.release.generation < 12 ? game.system.model : game.model
   if (Object.entries(game.settings.get('ffs', 'sheets')).filter(([k,v])=>v.document=="Actor").length) {
     html.find('section[data-tab=ffs]').find('select[name$=ActorDefaultSheet]')
