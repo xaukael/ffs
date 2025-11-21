@@ -3,6 +3,12 @@ var ffs = {};
 /**  
  * @param {string} name name given to the sheet in the module configuration. all text and config on the sheet will be stored under in the actor's ffs.name flag
 */
+class FreeFormSheet extends Dialog {
+  _onKeyDown(event) {
+    
+  }
+}
+
 ffs.freeformSheet = async function(name) {
   let doc = this;
   if (doc.permission<2) return ui.notifications.warn(`You do not have adequate permissions to view this ${doc.documentName}'s sheet`)
@@ -216,6 +222,7 @@ ffs.freeformSheet = async function(name) {
               if (!(ffs[id].showContentText)) $(this).html('');
               if (ffs[id].showContentImages) $(this).prepend($(`<img src="${img}">`));
               this.dataset.tooltip = content.name;
+              this.dataset.tooltipText = content.name;
             });
             $(this).find('img').height(span.fontSize)
             await doc.setFlag('ffs', `${name}.${key}`, {text: input});
@@ -406,7 +413,7 @@ ffs.freeformSheet = async function(name) {
     return $span;
   }
   let rendered = false
-  let d = new Dialog({
+  let d = new FreeFormSheet({
     title: `${doc.name}`,
     content: `<div class="sizer" style="position:relative;"><div class="ffs" style="height:${ffs[id].height}px; width:${ffs[id].width}px;"></div></div>`,
     buttons: {},
@@ -429,7 +436,7 @@ ffs.freeformSheet = async function(name) {
         #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span > input:focus {box-shadow: unset; } 
         #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span:focus-visible {outline-color:white; outline: ${color} solid 2px; outline-offset: 3px;}
         #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span { white-space: wrap; position: absolute; }
-        #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span a.content-link > img {margin-right: .1em;} 
+        #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span a.content-link > img {margin-right: .1em; float:left;} 
         #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span a:hover {text-shadow: 0 0 8px ${color} }
         ${!showContentIcons?`#${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span a.content-link > i {display:none;} 
         #${id} > section.window-content > div.dialog-content > div.sizer > div.ffs > span  a.inline-roll > i {display:none;} `:''}
@@ -1396,8 +1403,9 @@ Hooks.once("init", async () => {
       ui.windows[$('#client-settings').data()?.appid]?.render(true)
       $('div[id^=ffs]').each(function(){
         ui.windows[$(this).data().appid].close();
-      })
-      ui.sidebar.tabs.actors.render(true);
+      }) 
+      if (game.release.generation > 12 ) ui.actors.render(true)
+      else ui.sidebar.tabs.actors.render(true);
     }
   });
 
@@ -1509,10 +1517,58 @@ Hooks.on('renderActorSheet', (app, html)=>{
 })
 */
 // add actor directory context menu options for each sheet
-
+ffs.directoryContextOptions = function  (app, options) {
+  let collection = app.tabName;
+  if (!["actors", "items"].includes(collection)) return
+  for (let name of Object.entries(game.settings.get('ffs', 'sheets')).filter(([k,v])=>v.document==collection.capitalize().replace('s','')).map(([k,v])=>k)) {
+    let templates = game[collection].filter(a=>a.getFlag('ffs', name)?.template);
+    for (let template of templates) {
+      if (template && game.user.isGM) {
+        options.push(
+          {
+            "name": `Apply ${name.capitalize()} ${template.type.capitalize()} Template`,
+            "icon": `<i class="fas fa-download"></i>`,
+            "element": {},
+            condition: li => {
+              li = $(li)
+              console.log(li,li.data("entryId")  )
+              return (template.id != li.data("entryId") && template.type==game[collection].get(li.data("entryId")).type)
+            },
+            callback: async li => {
+              li = $(li)
+              console.log(li)
+              const doc = game[collection].get(li.data("entryId"));
+              let apply = await Dialog.prompt({
+                title: `Confirm Apply Template`,
+                content: `<center><p> This will apply all fields and configuration from ${template.name} to ${doc.name}</p><center>`,
+                callback:()=>{return true},
+                close:()=>{return false}
+              });
+              if (!apply) return ui.notifications.info('Freeform Sheet template application aborted.');
+              await ffs.clone(name, template, doc) ;
+              await doc.setFlag('ffs', 'defaultSheet', name)
+              await doc.setFlag('core', 'sheetClass', doc.documentName=='Actor'? "ffs.defaultActorFFS":"ffs.defaultItemFFS")
+              const sheet = doc.sheet;
+              await sheet.close();
+              doc._sheet = null;
+              delete doc.apps?.[sheet.appId];
+              
+              //doc.sheet.render(true)
+              //doc.freeformSheet(name);
+              return ui.notifications.info(`Freeform Sheet '${template.name}' applyed to '${doc.name}.'`);
+            }
+          }
+        );
+      }
+    }
+  }
+}
+Hooks.on('getActorContextOptions', ffs.directoryContextOptions )
+Hooks.on('getItemContextOptions', ffs.directoryContextOptions )
 Hooks.on('getSidebarTabEntryContext', (element, options)=>{
   
-  let collection = game.release.generation < 12 ? element[0].dataset.tab : element._element[0].dataset.tab
+  let collection =  game.release.generation < 12 ? element[0].dataset.tab : element._element[0].dataset.tab
+  
   if (!["actors", "items"].includes(collection)) return
   for (let name of Object.entries(game.settings.get('ffs', 'sheets')).filter(([k,v])=>v.document==collection.capitalize().replace('s','')).map(([k,v])=>k)) {
     let templates = game[collection].filter(a=>a.getFlag('ffs', name)?.template);
@@ -1711,7 +1767,7 @@ Hooks.once('setup', function () {
 })
 
 Hooks.on('renderDocumentSheetConfig', async (app, html)=>{
-  if (!['Actor', 'Item'].includes(app.object.documentName) ) return;
+  if (!['Actor', 'Item'].includes(game.release.generation > 12 ? app.document.collectionName : app.object.documentName) ) return;
   let sheets = Object.entries(game.settings.get('ffs', 'sheets')).filter(([k,v])=>v.document==app.object.documentName)
   if (sheets.length == 0) return
   let defaultSheet = app.object.getFlag('ffs', 'defaultSheet') ?? game.settings.get('ffs', `${app.object.type+app.object.documentName}DefaultSheet`)
