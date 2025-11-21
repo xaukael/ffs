@@ -15,7 +15,10 @@ Fonts can be added through the core font settings.
 ![Freefrom Sheet Example](https://user-images.githubusercontent.com/37848032/235782729-8c172940-526c-4103-8dee-765351e40510.png)
 
 Updates
-
+1.18.0
+  - fixed template application missing in v13
+  - fixed entity images being above text in v13
+  
 1.17.5
   - cleaned up console logs
   - spans are now contenteditable="true" instead of contenteditable="plaintext-only" due to firefox not supporting it
