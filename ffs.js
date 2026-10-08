@@ -462,7 +462,7 @@ ffs.freeformSheet = async function(name) {
       $sheet.contextmenu(async function(e){
         if (locked) return;
         if (!!e?.originalEvent && e?.originalEvent?.target.nodeName != "DIV") return;
-        let id = randomID();
+        let id = foundry.utils.randomID();
         let z = Object.entries(doc.getFlag('ffs', name)).filter(([k,v])=>v.z).map(([k,v])=>v.z).sort((a,b)=>b-a).at(0) ?? 1
         z++
         let value = {x: e.offsetX, y: e.offsetY-8, text: e.ctrlKey?"@":"NEW TEXT", fontSize: fontSize || 16, z};
@@ -484,7 +484,7 @@ ffs.freeformSheet = async function(name) {
         if (typeof data == 'object' && data.type== "Tile")
           text = `<img src="${data.texture.src}">`
         if (!text) return;
-        let id = randomID();
+        let id = foundry.utils.randomID();
         let value = {x: e.offsetX, y: e.offsetY-8, text, fontSize: fontSize};
         await doc.setFlag('ffs', [`${name}`], {[`${id}`]: value});
         let $span = await newSpan(id, value);

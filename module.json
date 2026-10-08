@@ -6,12 +6,12 @@
     "description": "Create character sheet for any system from just an image. Place text, stats, and content links anywhere at any size",
     "author": "Xaukael",
     "authors": [{"name":"Xaukael"}],
-    "version": "1.18.0",
-    "minimumCoreVersion": "9",
-    "compatibleCoreVersion": "13",
+    "version": "1.18.1",
+    "minimumCoreVersion": "11",
+    "compatibleCoreVersion": "14",
     "compatibility": {
-        "minimum": "9",
-        "verified": "13"
+        "minimum": "11",
+        "verified": "14"
       },
     "scripts": ["ffs.js", "jquery-ui.min.js"],
 		"styles": ["jquery-ui.css"],
