@@ -239,7 +239,7 @@ ffs.freeformSheet = async function(name) {
             //function buildObjectElements(rollData, el, objectPath) {
             //let property = getProperty(rollData, objectPath)
             function buildObjectElements(el, objectPath) {
-              let property = getProperty(doc, objectPath)
+              let property = foundry.utils.getProperty(doc, objectPath)
               if (property.documentName) return;
               if (property===null) return;
               for (let key of Object.keys(property)) {
@@ -565,7 +565,7 @@ ffs.freeformSheet = async function(name) {
       // Great for templating complex systems
       
       function buildObjectElements(el, objectPath) {
-        let property = getProperty(doc, objectPath)
+        let property = foundry.utils.getProperty(doc, objectPath)
         if (property.documentName) return;
         if (property===null) return;
         for (let key of Object.keys(property)) {
